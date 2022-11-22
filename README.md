@@ -10,7 +10,6 @@
 ＊私はFirefoxに自作 [CORS&#32;for&#32;Me](https://addons.mozilla.org/ja/firefox/addon/cors-for-me/) を入れて使用しています
 - ニュースリーダー (index.html) をロードした時ページ下部に表示されるURLに対するクロスドメインリクエストを許可してください。
 
-
 <img src="https://user-images.githubusercontent.com/32874862/203213276-b4cf045f-74fb-488b-8694-1b92b094120f.jpg" style="width:90%">
 
    
