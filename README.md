@@ -20,8 +20,8 @@
 
 ## 使い方
 
-ページ (https://yobukodori.github.io/j-news-reader/index.html) をロードすると自動的にニュースの収集を始めて結果を表示します。 
-すべてのファイルをローカルに置いて使用することもできます。
+ページ (index.html) をロードすると自動的にニュースの収集を始めて結果を表示します。 
+すべてのファイルをローカルに置いて使用することもできますし、こちら (https://yobukodori.github.io/j-news-reader/index.html) を利用することもできます。
 
 ## 収集しているニュースチャンネル
 
