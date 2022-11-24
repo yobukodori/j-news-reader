@@ -43,7 +43,7 @@ const profiles = {
 			description: "",
 		},
 		getTitle: function (title/* element */){
-			return title.firstChild.textContent
+			return title.firstChild.textContent.trim();
 		},
 		normarizeLink: function (url){
 			url.pathname.startsWith("/sp/") && (url.pathname = "/jc/" + url.pathname.substring(4));
@@ -98,6 +98,9 @@ const profiles = {
 			date: "time",
 			description: "",
 		},
+		getTitle: function (title/* element */){
+			return title.textContent.trim() + (title.parentElement.querySelector('use') ? "🔒" : "");
+		},
 		excludeItem: function (item, data){
 			return item.getElementsByTagName("time").length === 0;
 		},
@@ -139,8 +142,25 @@ const profiles = {
 			date: "time",
 			description: "",
 		},
+		getTitle: function (title/* element */){
+			return title.textContent.trim() + (title.parentElement.querySelector('figure.c-icon--keyGold') ? "🔒" : "");
+		},
 		excludeItem: function (item, data){
 			return item.getElementsByTagName("time").length === 0;
+		},
+	},
+	"毎日新聞トップ": {
+		url: "https://mainichi.jp/",
+		type: "html",
+		selector: {
+			item: '[data-cx-area="top-selection"] .toppickup, [data-cx-area="top-selection"] li',
+			title: '.toppickup-title, .toppickuplist-title, .articlelist-title',
+			link: 'a',
+			date: ".articletag-date",
+			description: "",
+		},
+		getTitle: function (title/* element */){
+			return title.textContent.trim() + (title.parentElement.querySelector('.is-limited') ? "🔒" : "");
 		},
 	},
 	"NHK主要ニュース(RSS)": {
