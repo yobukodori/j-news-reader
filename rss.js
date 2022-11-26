@@ -20,6 +20,9 @@ function parseDate(datestr){
 	else if (r = /^(\d+)(時間|分)前$/.exec(datestr)){
 		return now - r[1] * (r[2] === "時間" ? 60 * 60 * 1000 : 60 * 1000);
 	}
+	else if (r = /^(\d+)月(\d+)日\s(\d+:\d+)$/.exec(datestr)){
+		return Date.parse(now.getFullYear() + "/" + r[1] + "/" + r[2] + " " + r[3]);
+	}
 	return 0;
 }
 
@@ -56,6 +59,7 @@ function getRSS(prof){
 						}
 						data.datetime = 0;
 						prof.selector.date && (date = item.querySelector(prof.selector.date)) && (data.date = date.textContent.trim());
+						! data.date && prof.getDateFromItem && (data.date = prof.getDateFromItem(item));
 						if (! data.date  && prof.getDateFromArticle){
 							console.log("# xhr article from", data.link);
 							let xhr = new XMLHttpRequest();

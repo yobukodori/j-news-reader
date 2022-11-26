@@ -167,6 +167,24 @@ const profiles = {
 		url: "https://www.nhk.or.jp/rss/news/cat0.xml",
 		type: "rss",
 	},
+	"日経新聞マーケットバー": {
+		url: "https://www.nikkei.com/",
+		type: "html",
+		selector: {
+			item: 'k2-market-bar li[class^="index_"] a',
+			title: 'a',
+			link: 'a',
+			date: '',
+			description: '',
+		},
+		getTitle: function (title/* element */){
+			return title.firstChild.textContent + " " + Array.from(title.querySelectorAll('span')).map(e => e.textContent).join(" ");
+		},
+		getDateFromItem: function (item){
+			let datestr = item.getAttribute('title');
+			return datestr.split(" ").splice(0,2).join(" ");
+		},
+	},
 	"ロイタートップ(RSS)": {
 		url: "https://assets.wor.jp/rss/rdf/reuters/top.rdf",
 		type: "rss",
