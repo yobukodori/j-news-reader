@@ -15,7 +15,8 @@
 
    
    【CORS for Meでの設定例】  
-![cors4me setting-480p](https://user-images.githubusercontent.com/32874862/203214645-e59f8103-a7ba-4026-aa04-11907305836a.jpg)
+![cors4me setting](https://user-images.githubusercontent.com/32874862/206502451-6648d126-3569-4f60-8670-8a5aad9033cb.jpg)
+
 
 
 
