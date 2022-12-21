@@ -3,27 +3,27 @@ function corsAnyWhere(url){
 }
 
 function parseDate(datestr){
-	let datetime = Date.parse(datestr);
-	if (! isNaN(datetime)){ return datetime; }
+	let datetime = Date.parse(datestr), exact = true;
+	if (! isNaN(datetime)){ return {datetime, exact}; }
 	let now = new Date(), r;
 	if (r = /^(\d+)時(\d+)分$/.exec(datestr) || /^(\d+):(\d+)$/.exec(datestr)){
 		datetime = Date.parse(now.toLocaleDateString() + " " + r[1] + ":" + r[2]);
 		datetime > now && (datetime -= 24 * 60 * 60 * 1000);
-		return datetime;
+		return {datetime, exact};
 	}
 	else if (r = /^(\d+\/\d+\s\d+:\d+)$/.exec(datestr)){ // jiji.com
-		return Date.parse(now.getFullYear() + "/" + r[1]);
+		return {datetime: Date.parse(now.getFullYear() + "/" + r[1]), exact};
 	}
 	else if (r = /^(\d+\/\d+\/\d+\s\d+:\d+)$/.exec(datestr)){ // forbes
-		return Date.parse(r[1]);
+		return {datetime: Date.parse(r[1]), exact};
 	}
 	else if (r = /^(\d+)(時間|分)前$/.exec(datestr)){
-		return now - r[1] * (r[2] === "時間" ? 60 * 60 * 1000 : 60 * 1000);
+		return {datetime: now - r[1] * (r[2] === "時間" ? 60 * 60 * 1000 : 60 * 1000), exact: false};
 	}
 	else if (r = /^(\d+)月(\d+)日\s(\d+:\d+)$/.exec(datestr)){
-		return Date.parse(now.getFullYear() + "/" + r[1] + "/" + r[2] + " " + r[3]);
+		return {datetime: Date.parse(now.getFullYear() + "/" + r[1] + "/" + r[2] + " " + r[3]), exact};
 	}
-	return 0;
+	return {datetime: 0, exact: false};
 }
 
 function getRSS(prof){
@@ -60,15 +60,19 @@ function getRSS(prof){
 						data.datetime = 0;
 						prof.selector.date && (date = item.querySelector(prof.selector.date)) && (data.date = date.textContent.trim());
 						! data.date && prof.getDateFromItem && (data.date = prof.getDateFromItem(item));
-						if (! data.date  && prof.getDateFromArticle){
+						if (! data.date  && prof.getDataFromArticle){
 							console.log("# xhr article from", data.link);
 							let xhr = new XMLHttpRequest();
 							xhr.open("GET", data.link, false/*async*/);
 							xhr.send();
 							if (xhr.status === 200) {
-								let text = xhr.responseText;
-								data.date = prof.getDateFromArticle(xhr.responseText);
+								let { date, title } = prof.getDataFromArticle(xhr.responseText);
+								data.date = date;
 								console.log("date from article:", data.date);
+								if (title && title !== data.title){
+									data.title = title;
+									console.log("title from article:", data.title);
+								}
 							}
 							else {
 								console.log("# error status:", xhr.status);
@@ -76,7 +80,8 @@ function getRSS(prof){
 						}
 						if (data.date){
 							prof.adjustDate && (data.date = prof.adjustDate(data.date));
-							data.datetime = parseDate(data.date);
+							let {datetime, exact} = parseDate(data.date);
+							data.datetime = datetime, data.exact = exact;
 						}
 						console.log(rss.channel.title, "data:", data);
 						if (data.datetime && prof.isObsolete && prof.isObsolete(data.datetime)){ return; }

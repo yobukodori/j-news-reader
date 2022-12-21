@@ -2,12 +2,21 @@
 	clear: both;
 }
 
-.hide, .x-channel, .x-search {
+.hide, .x-channel, .x-filter {
 	display: none;
+}
+
+#update-interval {
+	width: 1.2em;
+	text-align: right;
 }
 
 #items > .item {
 	padding: 0.2em 0 0.2em 0.3em;
+}
+
+#items > .new {
+	background-color: bisque;
 }
 
 #items > .item:nth-child(2n) {
@@ -26,4 +35,9 @@
 .item > .date {
 	margin-left: 0.5em;
 	font-size: 90%;
+}
+
+#app-info {
+	text-align: center;
+	font-weight: bold;
 }

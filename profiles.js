@@ -50,9 +50,15 @@ const profiles = {
 			url.search.startsWith("?k=") && (url.search = url.search.split("&")[0]);
 			return (new URL(url)).href;
 		},
-		getDateFromArticle: function(text){
-			let sig = '"dateModified":"', i = text.indexOf(sig), start = i > -1 && i + sig.length, end = start && text.indexOf('"', start), date = end ?  text.substring(start, end) : "";
-			return date;
+		getDataFromArticle: function(text){
+			let data;
+			text.split('<script type="application/ld+json">').forEach((e,i)=>{
+				if (data && data["@type"] === "NewsArticle"){ return; }
+				i > 0 && (data = JSON.parse(e.split('</script>')[0]));
+			});
+			data.title = data.headline;
+			data.date = data.dateModified || data.datePublished;
+			return data;
 		},
 	},
 	"47NEWSトップ": {
@@ -145,6 +151,9 @@ const profiles = {
 		getTitle: function (title/* element */){
 			return title.textContent.trim() + (title.parentElement.querySelector('figure.c-icon--keyGold') ? "🔒" : "");
 		},
+		normarizeLink: function (url){
+			return url.search = "", (new URL(url)).href;
+		},
 		excludeItem: function (item, data){
 			return item.getElementsByTagName("time").length === 0;
 		},
@@ -181,8 +190,12 @@ const profiles = {
 			return title.firstChild.textContent + " " + Array.from(title.querySelectorAll('span')).map(e => e.textContent).join(" ");
 		},
 		getDateFromItem: function (item){
-			let datestr = item.getAttribute('title');
-			return datestr.split(" ").splice(0,2).join(" ");
+			let datestr = item.getAttribute('title').split(" ").splice(0,2).join(" ");
+			if (/NY(ダウ|原油)/.test(item.textContent)){
+				let r = /(\d+月\d+日 )(\d+)(:\d+)/.exec(datestr);
+				r && (datestr = r[1] + (r[2] * 1 + 14) + r[3]);
+			}
+			return datestr;
 		},
 	},
 	"ロイタートップ(RSS)": {
@@ -316,9 +329,9 @@ const profiles = {
 		},
 		first: 5,   // 最初の <first> item だけ処理
 		max: 10, // 最大 <max> item だけ取得
-		getDateFromArticle: function(text){
+		getDataFromArticle: function(text){
 			let sig = 'name="publishdatetime" value="', i = text.indexOf(sig), start = i > -1 && i + sig.length, end = start && text.indexOf('"', start), date = end ?  text.substring(start, end) : "";
-			return date;
+			return {date};
 		},
 		isObsolete: function (datetime){
 			let yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -338,9 +351,9 @@ const profiles = {
 		},
 		first: 5,   // 最初の <first> item だけ処理
 		max: 10, // 最大 <max> item だけ取得
-		getDateFromArticle: function(text){
+		getDataFromArticle: function(text){
 			let sig = 'name="publishdatetime" value="', i = text.indexOf(sig), start = i > -1 && i + sig.length, end = start && text.indexOf('"', start), date = end ?  text.substring(start, end) : "";
-			return date;
+			return {date};
 		},
 		isObsolete: function (datetime){
 			let yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
