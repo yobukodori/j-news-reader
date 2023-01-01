@@ -211,7 +211,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
 	Object.keys(profiles).forEach(k => {
 		urls += ", " + profiles[k].url;
 		profiles[k].access && profiles[k].access.forEach(url => urls += ", " + url);
-		channels += ", " + profiles[k].name;
+		channels += ", " + profiles[k].name + (profiles[k].type === "rss" ? "(RSS)" : "");
 	});
 	document.getElementById("cors-urls").textContent = urls.substring(1);
 	document.getElementById("collecting-channels").textContent = channels.substring(1);

@@ -1,5 +1,5 @@
 const profiles = {
-	"jiji.com(RSS)": {
+	"jiji.comアクセスランキング": {
 		url: "https://www.jiji.com/rss/ranking.rdf",
 		type: "rss",
 		normarizeLink: function (url){
@@ -172,7 +172,7 @@ const profiles = {
 			return title.textContent.trim() + (title.parentElement.querySelector('.is-limited') ? "🔒" : "");
 		},
 	},
-	"NHK主要ニュース(RSS)": {
+	"NHKニュース": {
 		url: "https://www.nhk.or.jp/rss/news/cat0.xml",
 		type: "rss",
 	},
@@ -198,7 +198,7 @@ const profiles = {
 			return datestr;
 		},
 	},
-	"ロイタートップ(RSS)": {
+	"ロイター トップニュース": {
 		url: "https://assets.wor.jp/rss/rdf/reuters/top.rdf",
 		type: "rss",
 	},
@@ -218,7 +218,7 @@ const profiles = {
 		type: "html",
 		selector: {
 			item: '.list-news-line > li',
-			title: 'a + a',
+			title: 'a + a[href$=".html"]',
 			link: 'a',
 			date: "span",
 			description: "",
@@ -312,7 +312,7 @@ const profiles = {
 	},
 	*/
 	// ===========================================
-	"ブルームバーグトップ(RSS)": {
+	"ブルームバーグ トップニュース": {
 		url: "https://assets.wor.jp/rss/rdf/bloomberg/top.rdf",
 		type: "rss",
 	},
@@ -360,7 +360,7 @@ const profiles = {
 			return yesterday.setHours(0, 0, 0, 0), datetime <  yesterday.getTime();
 		},
 	},
-	"AP通信(RSS)": {
+	"AP通信 - Yahoo!ニュース": {
 		url: "https://news.yahoo.co.jp/rss/media/aptsushinv/all.xml",
 		type: "rss",
 		normarizeLink: function (url){

@@ -12,7 +12,9 @@ function parseDate(datestr){
 		return {datetime, exact};
 	}
 	else if (r = /^(\d+\/\d+\s\d+:\d+)$/.exec(datestr)){ // jiji.com
-		return {datetime: Date.parse(now.getFullYear() + "/" + r[1]), exact};
+		datetime = Date.parse(now.getFullYear() + "/" + r[1]);
+		datetime > now && (datetime = Date.parse(now.getFullYear() - 1 + "/" + r[1]));
+		return {datetime, exact};
 	}
 	else if (r = /^(\d+\/\d+\/\d+\s\d+:\d+)$/.exec(datestr)){ // forbes
 		return {datetime: Date.parse(r[1]), exact};
@@ -21,7 +23,9 @@ function parseDate(datestr){
 		return {datetime: now - r[1] * (r[2] === "時間" ? 60 * 60 * 1000 : 60 * 1000), exact: false};
 	}
 	else if (r = /^(\d+)月(\d+)日\s(\d+:\d+)$/.exec(datestr)){
-		return {datetime: Date.parse(now.getFullYear() + "/" + r[1] + "/" + r[2] + " " + r[3]), exact};
+		datetime = Date.parse(now.getFullYear() + "/" + r[1] + "/" + r[2] + " " + r[3]);
+		datetime > now && (datetime = Date.parse(now.getFullYear() - 1 + "/" + r[1] + "/" + r[2] + " " + r[3]));
+		return {datetime, exact};
 	}
 	return {datetime: 0, exact: false};
 }
