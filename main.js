@@ -1,5 +1,5 @@
 const jnr = {
-	appVer: "1.0.0",
+	appVer: "1.0.2",
 	updateInterval: 5 * 60 * 1000,
 };
 
@@ -176,6 +176,11 @@ document.getElementById("clear-new-mark").addEventListener("click", ()=>{
 	title === "!new" && cs.dispatchEvent(new Event("change"));
 	notify({"new": 0});
 	showStatistics();
+});
+
+document.getElementById("clear-new-mark-then-upate").addEventListener("click", ()=>{
+	document.getElementById("clear-new-mark").dispatchEvent(new MouseEvent("click"));
+	document.getElementById("update").dispatchEvent(new MouseEvent("click"));
 });
 
 document.getElementById("filter-text").addEventListener("keydown", (ev)=>{
