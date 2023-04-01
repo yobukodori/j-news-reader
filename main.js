@@ -1,7 +1,43 @@
 const jnr = {
-	appVer: "1.0.3",
+	appVer: "1.0.4",
 	updateInterval: 5 * 60 * 1000,
 };
+
+function alert(msg){
+	const id = "alert";
+	let e = document.getElementById(id);
+	if(! e){
+		e = document.createElement("div");
+		e.id = id;
+		e.style.cssText = `
+			position: fixed;
+			 top: 50%;
+			 left: 50%;
+			 transform: translate(-50%,-50%);
+			 padding: 0.5em 1em;
+			 background-color: #ffff88;
+			 border: solid;
+			 min-width: 200px;
+			 max-height: ${Math.round(window.innerHeight * 0.8)}px;
+			 overflow-y: scroll;
+		`;
+		setTimeout(function(e){
+			document.addEventListener("click", function handler(ev){
+				document.removeEventListener("click", handler);
+				e.remove(); 
+			});
+		}, 0, e);
+		document.body.appendChild(e);
+	}
+	let m = document.createElement("div");
+	msg.split("\n").forEach((line,i) =>{
+		if (i > 0){ m.appendChild(document.createElement("br")); }
+		let span = document.createElement("span");
+		span.appendChild(document.createTextNode(line));
+		m.appendChild(span);
+	});
+	e.appendChild(m);
+}
 
 function notify(n){
 	let r = /^(🆕\s)?(.+)/.exec(document.title);
@@ -98,7 +134,13 @@ function update(){
 		jnr.tasks.push(pr);
 		pr.then(rss => {
 			if (rss.error){
-				console.log("# An error occurred while loading", prof.url, ":",  rss.error);
+				alert(`${prof.url} の読み込みに失敗しました：${rss.error}`);
+				console.log("# Error: an error occurred while loading", prof.url, ":",  rss.error);
+				return;
+			}
+			if (rss.itemCount === 0){
+				alert(`${prof.url} のページ中に記事を見つけられませんでした`);
+				console.log("# Error: failed to detect articles in", prof.url);
 				return;
 			}
 			console.log("# got rss from", prof.url);
@@ -212,10 +254,15 @@ document.getElementById("clear-filter").addEventListener("click", ()=>{
 });
 
 document.addEventListener("DOMContentLoaded", ()=>{
-	let urls = "", channels = "";
+	let urls = "", channels = "", listed = new Set();
 	Object.keys(profiles).forEach(k => {
-		urls += ", " + profiles[k].url;
-		profiles[k].access && profiles[k].access.forEach(url => urls += ", " + url);
+		[profiles[k].url].concat(profiles[k].access || []).forEach(url =>{
+			url = new URL(profiles[k].url).origin + "/*";
+			if (! listed.has(url)){
+				listed.add(url);
+				urls += ", " + url;
+			}
+		});
 		channels += ", " + profiles[k].name + (profiles[k].type === "rss" ? "(RSS)" : "");
 	});
 	document.getElementById("cors-urls").textContent = urls.substring(1);

@@ -318,13 +318,13 @@ const profiles = {
 	},
 	"Forbes政治経済": {
 		// 日付: PCあり モバイルなし
-		url: "https://forbesjapan.com/category/lists/economics",
+		url: "https://forbesjapan.com/category/economics",
 		type: "html",
 		selector: {
-			item: '.article-text .edittools-stream li',
-			title: '.article-headline',
+			item: '.section-articles-list .articles-list__list li',
+			title: '.tit',
 			link: 'a',
-			date: ".article-time",
+			date: ".date",
 			description: "",
 		},
 		first: 5,   // 最初の <first> item だけ処理
@@ -340,13 +340,13 @@ const profiles = {
 	},
 	"Forbesテクノロジー": {
 		// 日付: PCあり モバイルなし
-		url: "https://forbesjapan.com/category/lists/technology",
+		url: "https://forbesjapan.com/category/technology",
 		type: "html",
 		selector: {
-			item: '.article-text .edittools-stream li',
-			title: '.article-headline',
+			item: '.section-articles-list .articles-list__list li',
+			title: '.tit',
 			link: 'a',
-			date: ".article-time",
+			date: ".date",
 			description: "",
 		},
 		first: 5,   // 最初の <first> item だけ処理

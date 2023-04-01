@@ -32,12 +32,15 @@ function parseDate(datestr){
 
 function getRSS(prof){
 	const url = (document.location.protocol === "https:" && (new URL(prof.url)).protocol === "http:") ? corsAnyWhere(prof.url) : prof.url;
-	const rss = {error: "unexpected response text", channel: {title: prof.name, link: url}, item: []};
+	const rss = {error: "unexpected response text", channel: {title: prof.name, link: url}, itemCount:0, item: []};
 	console.log("# loading", prof.type, "from", url);
 	return new Promise((resolve,reject)=>{
 		fetch(url, {})
 		.then(res => {
 			console.log("# got res:", res);
+			if (! res.ok){
+				throw Error(res.status + " " + res.statusText);
+			}
 			return prof.type === "json" ? res.json() : res.text();
 		})
 		.then((text)=> {
@@ -88,6 +91,7 @@ function getRSS(prof){
 							data.datetime = datetime, data.exact = exact;
 						}
 						console.log(rss.channel.title, "data:", data);
+						rss.itemCount++;
 						if (data.datetime && prof.isObsolete && prof.isObsolete(data.datetime)){ return; }
 						if (prof.excludeItem && prof.excludeItem(item, data)){ return; }
 						rss.item.push(data);
@@ -128,6 +132,7 @@ function getRSS(prof){
 						! data.date && data.pubDate && (data.date = data.pubDate);
 						data.datetime = data.date ? (new Date(data.date)).getTime() : 0;
 						console.log(rss.channel.title, "data:", data);
+						rss.itemCount++;
 						if (data.datetime && prof.isObsolete && prof.isObsolete(data.datetime)){ return; }
 						rss.item.push(data);
 					});
@@ -152,6 +157,7 @@ function getRSS(prof){
 						data.datetime =  (new Date(data.date)).getTime();
 					}
 					console.log(rss.channel.title, "data:", data);
+					rss.itemCount++;
 					if (data.datetime && prof.isObsolete && prof.isObsolete(data.datetime)){ return; }
 					rss.item.push(data);
 				});
