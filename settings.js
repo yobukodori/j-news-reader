@@ -48,12 +48,14 @@ const settings = {
 	open(){
 		const id = "settings-modal";
 		if (document.getElementById(id)){ return; }
-		const modal = document.createElement("div"),
-				dlg = document.createElement("div");
+		const modal = document.createElement("div");
 		modal.id = id;
-		modal.append(dlg);
-		dlg.insertAdjacentHTML("beforeend", 
-		`
+		modal.insertAdjacentHTML("beforeend", 
+`
+<div id="settings-content">
+	<div id="settings-bar">
+	<button class="settings-close">閉じる</button>
+	</div>
 	<div id="settings-channels">
 		<b>チャンネル選択</b>
 		<div class="container checkbox">
@@ -79,8 +81,10 @@ const settings = {
 			<div><textarea rows="5" spellcheck="false"></textarea></div>
 		</div>
 	</div>
-		`
+</div>
+`
 		);
+		const dlg = modal.querySelector('#settings-content');
 		// チャンネル選択
 		let e, c = dlg.querySelector('#settings-channels > .container'), yahoo;
 		Object.keys(this.profiles).forEach(k =>{
@@ -140,7 +144,7 @@ const settings = {
 			updateYahoFilter();
 		});
 		
-		let onkeydown, cleanup;
+		let onkeydown, cleanup, close;
 		onkeydown = function(ev){
 			if (document.elementFromPoint(0,0) === modal){
 				ev.key === "Escape" && cleanup();
@@ -151,11 +155,13 @@ const settings = {
 			document.removeEventListener("keydown", onkeydown);
 			modal.remove();
 		};
-		modal.addEventListener("click", ev =>{
+		close = function(){
 			let t = updateTitleFilter(), y = updateYahoFilter();
 			if (! (t && y)){ return; }
 			cleanup();
-		});
+		};
+		modal.querySelector('button.settings-close').addEventListener("click", ev => close());
+		modal.addEventListener("click", ev => close());
 		dlg.addEventListener("click", ev => ev.stopPropagation());
 
 		document.body.appendChild(modal);

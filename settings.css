@@ -8,7 +8,7 @@
 	justify-content: center;
 }
 
-#settings-modal > div {
+#settings-content {
 	width: 90%;
 	margin-top: 10px;
 	margin-bottom: 10px;
@@ -16,7 +16,15 @@
 	background-color: ivory;
 }
 
-#settings-modal > div .container.checkbox {
+#settings-bar {
+	text-align: right;
+}
+
+#settings-bar .settings-close {
+	margin: 0.2em 0.2em 0 0
+}
+
+#settings-content .container.checkbox {
 	display: flex;
 	flex-wrap: wrap;
 }
