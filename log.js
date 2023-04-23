@@ -11,3 +11,7 @@ function log(){
 	}
 	box.textContent += "\r\n";
 }
+
+function logd(){
+	window.debug && console.log.apply(console, Array.from(arguments));
+}

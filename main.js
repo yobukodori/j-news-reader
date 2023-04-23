@@ -1,33 +1,30 @@
 const jnr = {
-	appVer: "1.0.4",
+	appVer: "1.0.5",
 	updateInterval: 5 * 60 * 1000,
 };
 
 function alert(msg){
-	const id = "alert";
-	let e = document.getElementById(id);
-	if(! e){
-		e = document.createElement("div");
-		e.id = id;
-		e.style.cssText = `
-			position: fixed;
-			 top: 50%;
-			 left: 50%;
-			 transform: translate(-50%,-50%);
-			 padding: 0.5em 1em;
-			 background-color: #ffff88;
-			 border: solid;
-			 min-width: 200px;
-			 max-height: ${Math.round(window.innerHeight * 0.8)}px;
-			 overflow-y: scroll;
-		`;
-		setTimeout(function(e){
-			document.addEventListener("click", function handler(ev){
-				document.removeEventListener("click", handler);
-				e.remove(); 
-			});
-		}, 0, e);
-		document.body.appendChild(e);
+	const id = "alert-modal";
+	let modal = document.getElementById(id);
+	if (! modal){
+		modal = document.createElement("div");
+		modal.id = id;
+		
+		let onkeydown, cleanup;
+		onkeydown = function(ev){
+			if (document.elementFromPoint(0,0) === modal){
+				ev.key === "Escape" && cleanup();
+			}
+		}; 
+		document.addEventListener("keydown", onkeydown);
+		cleanup = function(){
+			document.removeEventListener("keydown", onkeydown);
+			modal.remove();
+		};
+		modal.addEventListener("click", ev => cleanup());
+		
+		modal.append(document.createElement("div"));
+		document.body.appendChild(modal);
 	}
 	let m = document.createElement("div");
 	msg.split("\n").forEach((line,i) =>{
@@ -36,7 +33,7 @@ function alert(msg){
 		span.appendChild(document.createTextNode(line));
 		m.appendChild(span);
 	});
-	e.appendChild(m);
+	modal.firstElementChild.appendChild(m);
 }
 
 function notify(n){
@@ -44,13 +41,13 @@ function notify(n){
 	r && (document.title = (n.new ? "🆕 " : "") + r[2]);
 }
 
-function sortedIndex(array, value, descending) {
+function sortedIndex(array, value, opts) {
+	opts = opts || {};
     var low = 0,
         high = array.length;
-
     while (low < high) {
         var mid = (low + high) >>> 1;
-        if (descending ? array[mid] > value :  value > array[mid]) low = mid + 1;
+        if (opts.descending ? array[mid] > value :  value > array[mid]) low = mid + 1;
         else high = mid;
     }
     return low;
@@ -63,26 +60,67 @@ function showStatus(){
 }
 
 function showStatistics(){
-	let container = document.getElementById('items'), displaying = 0, news = 0;
+	let container = document.getElementById('items'), displaying = 0, news = 0, ng = 0;
 	Array.from(container.children).forEach(e => {
 		e.offsetParent && ++displaying;
 		e.classList.contains("new") && ++news;
+		e.classList.contains("x-settings-filter") && ++ng;
 	});
-	showStatus("記事総数:" + container.children.length, "新着:" + news, "表示中:" + displaying);
+	showStatus("記事総数:" + container.children.length, "新着:" + news, "表示中:" + displaying, "除外:" + ng);
 }
 
 function showUpdateTime(datetime){
 	document.getElementById("update-time").textContent = new Date(datetime).toLocaleTimeString();
 }
 
+function canonicalizeMediaName(name){
+	const table = {
+		"時事通信 jiji.com": /jiji\.com|時事通信/,
+		"共同通信 47NEWS": /47NEWS|共同通信/,
+		"読売新聞": /読売新聞/,
+		"朝日新聞": /朝日新聞/,
+		"毎日新聞": /毎日新聞/,
+		"NHK": /NHK/,
+		"ロイター": /ロイター/,
+		"CNN": /CNN/,
+		"BBC": /BBC/,
+		"AFPBB": /AFPBB|ＡＦＰ/,
+		"ブルームバーグ": /ブルームバーグ|Bloomberg/,
+		"フォーブス": /Forbes/,
+		"AP通信": /AP通信/,
+	};
+	const ar = Object.keys(table);
+	for (let i = 0 ; i < ar.length ; i++){
+		let k = ar[i], rex = table[k];
+		if (rex.test(name)){ return k; }
+	}
+	return name;
+}
+
+function getCanonicalizedMediaName(item){
+	return canonicalizeMediaName((item.dataChannel.title.startsWith("Yahoo!") && item.dataItem.media) ? item.dataItem.media : item.dataChannel.title);
+}
+
+function updateItemClassByChannel(e, chtitle){
+	(e.classList.contains("x-settings-filter") ? chtitle === "!filtered" : (! chtitle || (chtitle === "!new" && e.classList.contains("new")) || chtitle === (chtitle.startsWith("Yahoo!") ? e.dataChannel.title : getCanonicalizedMediaName(e)))) ? (e.classList.add("show"), e.classList.remove("x-channel")) : (e.classList.remove("show"), e.classList.add("x-channel"));
+}
+
 function printRSS(rss, opts){
 	opts = opts || {};
 	const chtitle = document.getElementById("channel-select").value, container = document.getElementById('items'), today = new Date();
 	rss.item.forEach(d => {
-		console.log(d);
+		logd(d);
 		let duplicated;
+		if (rss.channel.title.startsWith("Yahoo!") && d.media){
+			const media = canonicalizeMediaName(d.media);
+			duplicated = Array.from(container.children).find(item => item.dataChannel.title !== rss.channel.title && item.dataItem.title === d.title && canonicalizeMediaName(item.dataChannel.title) === media);
+			if (duplicated){
+				console.log("duplicated:", d.title + "\n" + rss.channel.title, d.media, "/", duplicated.dataChannel.title);
+				return;
+			}
+		}
 		if (duplicated = Array.from(container.children).find(item => item.dataItem.link === d.link)){
-			console.log("duplicated link");
+			logd("duplicated link");
 			if (! d.exact || ! duplicated.dataItem.exact){ return; }
 			let datetime = duplicated.dataItem.datetime2 || duplicated.dataItem.datetime;
 			if (d.datetime <= datetime){ return; }
@@ -97,7 +135,7 @@ function printRSS(rss, opts){
 		d.link && (title.href = d.link), title.target = "_blank";
 		item.appendChild(title), item.className = "item";
 		description.textContent = d.description || "", description.className = "description";
-		channel.append(rss.channel.title), channel.href = rss.channel.link, channel.className = "channel", channel.target = "_blank";
+		channel.append(rss.channel.title + (d.media ? " " + d.media : "")), channel.href = rss.channel.link, channel.className = "channel", channel.target = "_blank";
 		date.textContent = d.datetime ? (new Date(d.datetime)).toLocaleString() : (d.date  || ""), date.className = "date";
 		item.className = "item", item.append(title, description, channel, date);
 		item.dataItem = d, item.dataChannel = rss.channel;
@@ -106,9 +144,11 @@ function printRSS(rss, opts){
 			let r = /^((\d+)年)?(\d+)月(\d+)日$/.exec(item.dataItem.date);
 			r && (item.dataItem.datetime2 = datetime = Date.parse( (r[2] || today.getFullYear()) + "/" + r[3] + "/" +r [4] + " 00:00"));
 		}
+		settings.isNgTitle(title.textContent) && item.classList.add("x-settings-filter");
+		d.media && settings.isNgYahooMeida(d.media) && item.classList.add("x-settings-filter");
 		opts.markNew && item.classList.add("new");
-		! (! chtitle || (chtitle === "!new" && item.classList.contains("new")) || item.dataChannel.title === chtitle) && item.classList.add("x-channel");
-		let ar = Array.from(container.children).map(item => item.dataItem.datetime2 || item.dataItem.datetime),  i = sortedIndex(ar, datetime, true);
+		updateItemClassByChannel(item, chtitle);
+		let ar = Array.from(container.children).map(item => item.dataItem.datetime2 || item.dataItem.datetime),  i = sortedIndex(ar, datetime, {descending:true});
 		while (i < ar.length && datetime === ar[i]){ i++; }
 		i < container.children.length ? container.children[i].before(item) : container.append(item);
 	});
@@ -124,35 +164,46 @@ function update(){
 	//Array.from(container.children).forEach(item => item.classList.remove("new"));
 	showUpdateTime(jnr.lastUpdateStart = Date.now());
 	showStatus("読み込み中・・・");
-	let total = Object.keys(profiles).length,  read = 0;
+	//Object.keys(profiles).length
+	let total = settings.getActiveChannelCount(),  read = 0;
 	jnr.tasks = [];
 	Object.keys(profiles).forEach(k => {
 		const prof = profiles[k];
+		if (settings.isNgChannel(prof.id)){ return; }
 		//if (! prof.name.startsWith("jiji.comトップ")){return;}
-		console.log("channel:", prof);
+		logd("channel:", prof);
 		let pr = getRSS(prof);
 		jnr.tasks.push(pr);
 		pr.then(rss => {
+			rss.channel.yahoo = prof.id === "yahoo";
 			if (rss.error){
 				alert(`${prof.url} の読み込みに失敗しました：${rss.error}`);
-				console.log("# Error: an error occurred while loading", prof.url, ":",  rss.error);
+				if (rss.error === "NetworkError when attempting to fetch resource."){
+					alert("上記エラーは一般的にクロスドメインリクエストが拒否された場合に発生します。上記 URL へのクロスドメインリクエストが許可されているか確認してください");
+				}
+				logd("# Error: an error occurred while loading", prof.url, ":",  rss.error);
 				return;
 			}
 			if (rss.itemCount === 0){
 				alert(`${prof.url} のページ中に記事を見つけられませんでした`);
-				console.log("# Error: failed to detect articles in", prof.url);
+				logd("# Error: failed to detect articles in", prof.url);
 				return;
 			}
-			console.log("# got rss from", prof.url);
+			logd("# got rss from", prof.url);
 			printRSS(rss, {markNew: !!jnr.lastUpdateEnd});
 			if (rss.channel.title){
 				const container = document.getElementById('channel-select'),
-					ar = Array.from(container.children).map(opt => opt.value);
-				if (! ar.includes(rss.channel.title)){
+					ar = Array.from(container.children).map(opt => opt.value.toLowerCase());
+				let title = rss.channel.title;
+				if (! rss.channel.yahoo){
+					title = canonicalizeMediaName(title);
+				}
+				if (! ar.includes(title)){
 					let e = document.createElement("option");
-					e.value = e.textContent = rss.channel.title;
-					let i = sortedIndex(ar, e.value);
+					e.value = e.textContent = title;
+					let i = sortedIndex(ar, e.value.toLowerCase());
 					i < container.children.length ? container.children[i].before(e) : container.append(e);
+					container.append(container.querySelector('option[value="!filtered"]'));
 				}
 			}
 			showStatus(++read === total ? "取得結果:" : read + "/" + total + " 読み込み中・・・", container.children.length, "件");
@@ -169,9 +220,10 @@ function update(){
 
 document.getElementById("channel-select").addEventListener("change", ()=>{
 	let chtitle = document.getElementById("channel-select").value;
-	console.log("channel-select on change. value:", chtitle);
+	//chtitle = canonicalizeMediaName(chtitle);
+	logd("channel-select on change. value:", chtitle);
 	Array.from(document.getElementById('items').children).forEach(e => {
-		(! chtitle || (chtitle === "!new" && e.classList.contains("new")) || e.dataChannel.title === chtitle) ? e.classList.remove("x-channel") : e.classList.add("x-channel");
+		updateItemClassByChannel(e, chtitle);
 	});
 	showStatistics();
 });
@@ -236,7 +288,7 @@ document.getElementById("apply-filter").addEventListener("click", ()=>{
 		alert("フィルタを指定してください");
 		return;
 	}
-	console.log("filter-text:", text);
+	logd("filter-text:", text);
 	const filter = new Filter(text);
 	if (filter.error){
 		alert(filter.error);
@@ -250,6 +302,14 @@ document.getElementById("apply-filter").addEventListener("click", ()=>{
 
 document.getElementById("clear-filter").addEventListener("click", ()=>{
 	Array.from(document.getElementById('items').children).forEach(e => e.classList.remove("x-filter"));
+	showStatistics();
+});
+
+document.getElementById("settings").addEventListener("click", ()=>{
+	settings.open();
+	Array.from(document.getElementById('items').children).forEach(item =>{
+		settings.isNgTitle(item.title.textContent) ? item.classList.add("x-settings-filter") : item.classList.remove("x-settings-filter");
+	});
 	showStatistics();
 });
 
@@ -276,5 +336,6 @@ document.addEventListener("DOMContentLoaded", ()=>{
 			val = (i !== -1 ? decodeURIComponent(param.substring(i+1)) : null);
 		name && (opts[name] = val);
 	});
+	settings.init(profiles);
 	! opts.hasOwnProperty("m") && update();
 });

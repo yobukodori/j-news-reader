@@ -16,8 +16,17 @@ function parseDate(datestr){
 		datetime > now && (datetime = Date.parse(now.getFullYear() - 1 + "/" + r[1]));
 		return {datetime, exact};
 	}
+	else if (r = /^(\d+\/\d+)$/.exec(datestr)){ // cnn
+		datestr += " 0:0";
+		datetime = Date.parse(now.getFullYear() + "/" + datestr);
+		datetime > now && (datetime = Date.parse(now.getFullYear() - 1 + "/" + datestr));
+		return {datetime, exact};
+	}
 	else if (r = /^(\d+\/\d+\/\d+\s\d+:\d+)$/.exec(datestr)){ // forbes
 		return {datetime: Date.parse(r[1]), exact};
+	}
+	else if (r = /^(\d+\.\d+\.\d+\s\d+:\d+)$/.exec(datestr)){ // forbes
+		return {datetime: Date.parse(r[1].replace(/\./g, "/")), exact};
 	}
 	else if (r = /^(\d+)(時間|分)前$/.exec(datestr)){
 		return {datetime: now - r[1] * (r[2] === "時間" ? 60 * 60 * 1000 : 60 * 1000), exact: false};
@@ -33,11 +42,11 @@ function parseDate(datestr){
 function getRSS(prof){
 	const url = (document.location.protocol === "https:" && (new URL(prof.url)).protocol === "http:") ? corsAnyWhere(prof.url) : prof.url;
 	const rss = {error: "unexpected response text", channel: {title: prof.name, link: url}, itemCount:0, item: []};
-	console.log("# loading", prof.type, "from", url);
+	logd("# loading", prof.type, "from", url);
 	return new Promise((resolve,reject)=>{
-		fetch(url, {})
+		(prof.fetch ? prof.fetch.bind(prof) : fetch)(url, {})
 		.then(res => {
-			console.log("# got res:", res);
+			logd("# got res:", res);
 			if (! res.ok){
 				throw Error(res.status + " " + res.statusText);
 			}
@@ -46,13 +55,13 @@ function getRSS(prof){
 		.then((text)=> {
 			const domParser = new DOMParser();
 			let count = 0;
-			console.log("# got", prof.type, "from", url, ":\n" + ("" + text).substring(0,1000));
+			logd("# got", prof.type, "from", url, ":\n" + ("" + text).substring(0,1000));
 			if (prof.type === "html"){
 				let d = domParser.parseFromString(text, "text/html");
-				console.log(d);
+				logd(d);
 				if (prof.selector){
 					d.querySelectorAll(prof.selector.item).forEach((item) => {
-						console.log(rss.channel.title, "item:", item);
+						logd(rss.channel.title, "item:", item);
 						if (prof.first && count++ >= prof.first){ return; }
 						if (prof.max && rss.item.length === prof.max){ return; }
 						let data = {}, title, link, date;
@@ -68,21 +77,21 @@ function getRSS(prof){
 						prof.selector.date && (date = item.querySelector(prof.selector.date)) && (data.date = date.textContent.trim());
 						! data.date && prof.getDateFromItem && (data.date = prof.getDateFromItem(item));
 						if (! data.date  && prof.getDataFromArticle){
-							console.log("# xhr article from", data.link);
+							logd("# xhr article from", data.link);
 							let xhr = new XMLHttpRequest();
 							xhr.open("GET", data.link, false/*async*/);
 							xhr.send();
 							if (xhr.status === 200) {
 								let { date, title } = prof.getDataFromArticle(xhr.responseText);
 								data.date = date;
-								console.log("date from article:", data.date);
+								logd("date from article:", data.date);
 								if (title && title !== data.title){
 									data.title = title;
-									console.log("title from article:", data.title);
+									logd("title from article:", data.title);
 								}
 							}
 							else {
-								console.log("# error status:", xhr.status);
+								logd("# error status:", xhr.status);
 							}
 						}
 						if (data.date){
@@ -90,7 +99,7 @@ function getRSS(prof){
 							let {datetime, exact} = parseDate(data.date);
 							data.datetime = datetime, data.exact = exact;
 						}
-						console.log(rss.channel.title, "data:", data);
+						logd(rss.channel.title, "data:", data);
 						rss.itemCount++;
 						if (data.datetime && prof.isObsolete && prof.isObsolete(data.datetime)){ return; }
 						if (prof.excludeItem && prof.excludeItem(item, data)){ return; }
@@ -98,14 +107,15 @@ function getRSS(prof){
 					});
 					delete rss.error;
 				}
+				resolve(rss);
 			}
 			else if (prof.type === "rss"){
 				let d = domParser.parseFromString(text, "text/xml"), doc = d.documentElement;
-				console.log("xmldoc:", d);
-				console.log("xmldoc.documentElement:", doc);
+				logd("xmldoc:", d);
+				logd("xmldoc.documentElement:", doc);
 				const ch = doc.firstElementChild;
 				(ch && ch.tagName === "channel") ? Array.from(ch.children).forEach(e => rss.channel[e.tagName] = e.textContent.trim()) : (ch = null);
-				console.log("channel:", rss.channel);
+				logd("channel:", rss.channel);
 				let container;
 				if (doc.tagName === "rdf:RDF"){
 					rss.version = 1;
@@ -118,7 +128,7 @@ function getRSS(prof){
 				if (container){
 					Array.from(container).forEach(item =>{
 						if (item.tagName !== "item"){ return; }
-						console.log(rss.channel.title, "item:", item);
+						logd(rss.channel.title, "item:", item);
 						if (prof.first && count++ >= prof.first){ return; }
 						if (prof.max && rss.item.length === prof.max){ return; }
 						let tag, data = {};
@@ -131,42 +141,48 @@ function getRSS(prof){
 						}
 						! data.date && data.pubDate && (data.date = data.pubDate);
 						data.datetime = data.date ? (new Date(data.date)).getTime() : 0;
-						console.log(rss.channel.title, "data:", data);
+						logd(rss.channel.title, "data:", data);
 						rss.itemCount++;
 						if (data.datetime && prof.isObsolete && prof.isObsolete(data.datetime)){ return; }
 						rss.item.push(data);
 					});
 					delete rss.error;
 				}
+				resolve(rss);
 			}
 			else if (prof.type === "json"){
-				let items = prof.getItems(text);
-				items.forEach(item => {
-					if (prof.first && count++ >= prof.first){ return; }
-					if (prof.max && rss.item.length === prof.max){ return; }
-					let data = {datetime: 0};
-					["title", "link", "date"].forEach(name => {
-						data[name] = prof.get[name] ? prof.get[name](item) : item[name];
+				prof.getItems(text).then(items =>{
+					items.forEach(item => {
+						if (prof.first && count++ >= prof.first){ return; }
+						if (prof.max && rss.item.length === prof.max){ return; }
+						let data = {datetime: 0};
+						["title", "link", "date", "media"].forEach(name => {
+							data[name] = (prof.get && prof.get[name]) ? prof.get[name](item) : item[name];
+						});
+						if (data.link){
+							const u = new URL(data.link, prof.url);
+							data.link = prof.normarizeLink ? prof.normarizeLink(u) : u.href;
+						}
+						if (data.date){
+							prof.adjustDate && (data.date = prof.adjustDate(data.date));
+							data.datetime =  (new Date(data.date)).getTime();
+						}
+						logd(rss.channel.title, "data:", data);
+						rss.itemCount++;
+						if (data.datetime && prof.isObsolete && prof.isObsolete(data.datetime)){ return; }
+						rss.item.push(data);
 					});
-					if (data.link){
-						const u = new URL(data.link, prof.url);
-						data.link = prof.normarizeLink ? prof.normarizeLink(u) : u.href;
-					}
-					if (data.date){
-						prof.adjustDate && (data.date = prof.adjustDate(data.date));
-						data.datetime =  (new Date(data.date)).getTime();
-					}
-					console.log(rss.channel.title, "data:", data);
-					rss.itemCount++;
-					if (data.datetime && prof.isObsolete && prof.isObsolete(data.datetime)){ return; }
-					rss.item.push(data);
-				});
-				delete rss.error;
+					delete rss.error;
+					resolve(rss);
+				})
+				.catch (e =>{ throw e; });
 			}
-			resolve(rss);
+			else {
+				throw Error("bug! unexpected profile type: " + prof.type);
+			}
 		})
 		.catch(err => {
-			console.log("error on fetching", url + ":" + err);
+			logd("error on fetching", url + ":" + err);
 			rss.error = err.message;
 			resolve(rss);
 		});

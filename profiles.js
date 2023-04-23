@@ -1,5 +1,6 @@
 const profiles = {
 	"jiji.comアクセスランキング": {
+		id: "jiji-rank",
 		url: "https://www.jiji.com/rss/ranking.rdf",
 		type: "rss",
 		normarizeLink: function (url){
@@ -9,6 +10,7 @@ const profiles = {
 		},
 	},
 	"jiji.com新着": {
+		id: "jiji-news",
 		url: "https://www.jiji.com/jc/list?g=news",
 		access: ["https://www.jiji.com/sp/list?g=news"],
 		type: "html",
@@ -32,6 +34,7 @@ const profiles = {
 		},
 	},
 	"jiji.comトップ": {
+		id: "jiji-top",
 		url: "https://www.jiji.com/sp/", // pc版はタイトルが省略されている
 		type: "html",
 		access: ["https://www.jiji.com/jc/article?*", "https://www.jiji.com/sp/article?*"],
@@ -62,6 +65,7 @@ const profiles = {
 		},
 	},
 	"47NEWSトップ": {
+		id: "47news",
 		url: "https://www.47news.jp/",
 		type: "html",
 		selector: {
@@ -95,6 +99,7 @@ const profiles = {
 	},
 	*/
 	"読売新聞トップ": {
+		id: "yomiuri",
 		url: "https://www.yomiuri.co.jp/",
 		type: "html",
 		selector: {
@@ -138,6 +143,7 @@ const profiles = {
 	},
 	*/
 	"朝日新聞トップ": {
+		id: "asahi",
 		url: "https://www.asahi.com/",
 		access: ["https://www.asahi.com/sp/"],
 		type: "html",
@@ -159,6 +165,7 @@ const profiles = {
 		},
 	},
 	"毎日新聞トップ": {
+		id: "mainichi",
 		url: "https://mainichi.jp/",
 		type: "html",
 		selector: {
@@ -173,10 +180,12 @@ const profiles = {
 		},
 	},
 	"NHKニュース": {
+		id: "nhk",
 		url: "https://www.nhk.or.jp/rss/news/cat0.xml",
 		type: "rss",
 	},
 	"日経新聞マーケットバー": {
+		id: "nikkei-bar",
 		url: "https://www.nikkei.com/",
 		type: "html",
 		selector: {
@@ -199,6 +208,7 @@ const profiles = {
 		},
 	},
 	"ロイター トップニュース": {
+		id: "reuter",
 		url: "https://assets.wor.jp/rss/rdf/reuters/top.rdf",
 		type: "rss",
 	},
@@ -214,6 +224,7 @@ const profiles = {
 	},
 	*/
 	"CNN全記事一覧": {
+		id: "cnn",
 		url: "https://www.cnn.co.jp/archives/",
 		type: "html",
 		selector: {
@@ -225,6 +236,7 @@ const profiles = {
 		},
 	},
 	"BBCトップ": {
+		id: "bbc",
 		url: "https://www.bbc.com/japanese",
 		type: "html",
 		selector: {
@@ -262,6 +274,7 @@ const profiles = {
 	},
 	*/
 	"AFPBB新着": {
+		id: "afpbb-latest",
 		url: "https://www.afpbb.com/list/latest/",
 		type: "html",
 		selector: {
@@ -313,10 +326,12 @@ const profiles = {
 	*/
 	// ===========================================
 	"ブルームバーグ トップニュース": {
+		id: "bloomberg",
 		url: "https://assets.wor.jp/rss/rdf/bloomberg/top.rdf",
 		type: "rss",
 	},
 	"Forbes政治経済": {
+		id: "forbes-economics",
 		// 日付: PCあり モバイルなし
 		url: "https://forbesjapan.com/category/economics",
 		type: "html",
@@ -339,6 +354,7 @@ const profiles = {
 		},
 	},
 	"Forbesテクノロジー": {
+		id: "forbes-technology",
 		// 日付: PCあり モバイルなし
 		url: "https://forbesjapan.com/category/technology",
 		type: "html",
@@ -361,6 +377,7 @@ const profiles = {
 		},
 	},
 	"AP通信 - Yahoo!ニュース": {
+		id: "ap-yahoo",
 		url: "https://news.yahoo.co.jp/rss/media/aptsushinv/all.xml",
 		type: "rss",
 		normarizeLink: function (url){
@@ -374,7 +391,129 @@ const profiles = {
 			return yesterday.setHours(0, 0, 0, 0), datetime <  yesterday.getTime();
 		},
 	},
+	"Yahoo!ニュース": {
+		id: "yahoo",
+		url: "https://news.yahoo.co.jp/",
+		type: "json",
+		categories: [{name: "主要", id: "major"}, {name: "国内", id: "domestic"}, {name: "国際", id: "world"}, {name: "経済", id: "business"}, {name: "エンタメ", id: "entertainment"}, {name: "スポーツ", id: "sports"}, {name: "IT", id: "it"}, {name: "科学", id: "science"}, {name: "地域", id: "local"}],
+		getItems(data){
+			const domParser = new DOMParser();
+			const items = [], tasks = [];
+			return new Promise((resolve, reject)=>{
+				data.topicsList.categories.forEach(c =>{
+					c.topicsList.forEach(t =>{
+						if (settings.isNgYahooCategory(c.categoryId)){ return; }
+						let item = {title: t.title, link: t.url, date: t.publishedTime_ISO8601};
+						items.push(item);
+						if (settings.needsToGetYahooSource()){
+							let task = new Promise((resolve, reject)=>{
+								fetch(item.link)
+								.then(res =>{
+									if (! res.ok){ throw Error(res.status + " " + res.statusText); }
+									return res.text();
+								})
+								.then(text =>{
+									const doc = domParser.parseFromString(text, "text/html");
+									let a = doc.querySelector('[data-ual-view-type="digest"] a');
+									if (a){
+										item.link = a.href;
+										let p = a.querySelector('p');
+										if (p){ item.title = p.textContent.trim(); }
+										let s = a.querySelector('p + span');
+										if (s){ item.media = s.textContent.trim(); }
+									}
+									resolve(true);
+								})
+								.catch(e => reject(e));
+							});
+							tasks.push(task);
+						}
+					});
+				});
+				Promise.allSettled(tasks).then(values => {
+					resolve(items);
+				});
+			});
+		},
+		promisedFetch(url, init, resolve, reject, recur){
+			let response;
+			fetch(url, init)
+			.then(res =>{
+				response = res;
+				if (! res.ok){ throw Error(res.status + " " + res.statusText); }
+				return res.text();
+			})
+			.then(text =>{
+				const domParser = new DOMParser();
+				const doc = domParser.parseFromString(text, "text/html");
+				let e = doc.querySelector('meta[name="viewport"][content^="width=device-width"]');
+				if (! e){
+					if (! recur){
+						init = init ? Object.assign({headers:{}}, init) : {headers:{}};
+						init.headers["User-Agent"] = "Mozilla/5.0 (Linux; Android 11; SAMSUNG SM-G973U) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/14.2 Chrome/87.0.4280.141 Mobile Safari/537.36";
+						this.promisedFetch(url, init, resolve, reject, true);
+						return;
+					}
+					throw Error("モバイルページを取得できません");
+				}
+				const sig = "window.__PRELOADED_STATE__ =";
+				e = Array.from(doc.getElementsByTagName("script")).find(e => e.textContent.startsWith(sig));
+				if (! e){ throw Error("window.__PRELOADED_STATE__が見つかりません"); }
+				const data = JSON.parse(e.textContent.substring(sig.length));
+				logd("__PRELOADED_STATE__:", data);
+				response.json = function(){ return data; };
+				resolve(response);
+			})
+			.catch(e => reject(e));
+		},
+		fetch(url, init){
+			return new Promise((resolve, reject)=>{
+				this.promisedFetch(url, init, resolve, reject);
+			});
+		},
+	},
+	/*
+	"Yahoo!ニュース・トピックス - 主要": {
+		url: "https://news.yahoo.co.jp/rss/topics/top-picks.xml",
+		type: "rss",
+	},
+	"Yahoo!ニュース・トピックス - 国内": {
+		url: "https://news.yahoo.co.jp/rss/topics/domestic.xml",
+		type: "rss",
+	},
+	"Yahoo!ニュース・トピックス - 国際": {
+		url: "https://news.yahoo.co.jp/rss/topics/world.xml",
+		type: "rss",
+	},
+	"Yahoo!ニュース・トピックス - 経済": {
+		url: "https://news.yahoo.co.jp/rss/topics/business.xml",
+		type: "rss",
+	},
+	"Yahoo!ニュース・トピックス - エンタメ": {
+		url: "https://news.yahoo.co.jp/rss/topics/entertainment.xml",
+		type: "rss",
+	},
+	"Yahoo!ニュース・トピックス - スポーツ": {
+		url: "https://news.yahoo.co.jp/rss/topics/sports.xml",
+		type: "rss",
+	},
+	"Yahoo!ニュース・トピックス - IT": {
+		url: "https://news.yahoo.co.jp/rss/topics/it.xml",
+		type: "rss",
+	},
+	"Yahoo!ニュース・トピックス - 科学": {
+		url: "https://news.yahoo.co.jp/rss/topics/science.xml",
+		type: "rss",
+	},
+	"Yahoo!ニュース・トピックス - 地域": {
+		url: "https://news.yahoo.co.jp/rss/topics/local.xml",
+		type: "rss",
+	},
+	*/
 };
 
-Object.keys(profiles).forEach(k => profiles[k].name = k);
+Object.keys(profiles).forEach(k =>{
+	profiles[k].name = k;
+	//! k.startsWith("Yahoo") && delete profiles[k];
+});
 

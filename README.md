@@ -3,7 +3,7 @@
 日本語ニュースを掲載しているサイトやRSSから記事を収集してリンク付きでタイトルを表示します。  
 日付が新しい順に表示、また記事URLが重複する場合は日付が新しいものを表示、新着は色付きで表示  
 
-<img src="https://user-images.githubusercontent.com/32874862/208819848-789e59e1-5823-454c-ae6b-f63544ed0445.jpg" style="width:90%">
+<img src="https://yobukodori.github.io/freedom/image/j-news-reader.jpg" style="width:90%">
 
 ## 【動作条件】
 
@@ -11,11 +11,11 @@
 ＊私はFirefoxに自作 [CORS&#32;for&#32;Me](https://addons.mozilla.org/ja/firefox/addon/cors-for-me/) を入れて使用しています
 - ニュースリーダー (index.html) をロードした時ページ下部に表示されるURLに対するクロスドメインリクエストを許可してください。
 
-<img src="https://user-images.githubusercontent.com/32874862/208820014-7e0768a6-c896-4304-aa66-f632795a1d4c.jpg" style="width:90%">
+<img src="https://yobukodori.github.io/freedom/image/j-news-reader-page-bottom.jpg" style="width:90%">
 
    
    【CORS for Meでの設定例】  
-![cors4me setting](https://user-images.githubusercontent.com/32874862/206502451-6648d126-3569-4f60-8670-8a5aad9033cb.jpg)
+![cors4me setting](https://yobukodori.github.io/freedom/image/j-news-reader-cors-setting.jpg)
 
 
 
@@ -39,6 +39,9 @@
 	- ( ) でくくって演算の優先順位を指定できます 例 `(ウクラ or ゼレ) (ロシア or プー)`
 	- **適用**：フィルタを適用し一致する記事だけ表示します。入力ボックス内で［Enter］でも適用
 	- **解除**：フィルタの効果を解除します。入力ボックス内で［Esc］でも解除
+- **設定**：各種設定ができます。次のスクリーンショットを参照してください。
+
+<img src="https://yobukodori.github.io/freedom/image/j-news-reader-settings.jpg" style="width:90%">
 
 ## 収集しているニュースチャンネル
 
