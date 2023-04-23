@@ -1,5 +1,5 @@
 const jnr = {
-	appVer: "1.0.5",
+	appVer: "1.0.6",
 	updateInterval: 5 * 60 * 1000,
 };
 
@@ -198,7 +198,7 @@ function update(){
 				if (! rss.channel.yahoo){
 					title = canonicalizeMediaName(title);
 				}
-				if (! ar.includes(title)){
+				if (! ar.includes(title.toLowerCase())){
 					let e = document.createElement("option");
 					e.value = e.textContent = title;
 					let i = sortedIndex(ar, e.value.toLowerCase());
