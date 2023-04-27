@@ -1,4 +1,35 @@
 const profiles = {
+	"jiji.comトップ": {
+		id: "jiji-top",
+		url: "https://www.jiji.com/sp/", // pc版はタイトルが省略されている
+		type: "html",
+		access: ["https://www.jiji.com/jc/article?*", "https://www.jiji.com/sp/article?*"],
+		selector: {
+			item: '.HomeTopics .TopicsPhoto, .HomeTopics li, .top5new',
+			title: '.TopicsPhoto > a > span, li > a, dd > p',
+			link: 'a',
+			date: "",
+			description: "",
+		},
+		getTitle: function (title/* element */){
+			return title.firstChild.textContent.trim();
+		},
+		normarizeLink: function (url){
+			url.pathname.startsWith("/sp/") && (url.pathname = "/jc/" + url.pathname.substring(4));
+			url.search.startsWith("?k=") && (url.search = url.search.split("&")[0]);
+			return (new URL(url)).href;
+		},
+		getDataFromArticle: function(text){
+			let data;
+			text.split('<script type="application/ld+json">').forEach((e,i)=>{
+				if (data && data["@type"] === "NewsArticle"){ return; }
+				i > 0 && (data = JSON.parse(e.split('</script>')[0]));
+			});
+			data.title = data.headline;
+			data.date = data.datePublished; // data.dateModified
+			return data;
+		},
+	},
 	"jiji.comアクセスランキング": {
 		id: "jiji-rank",
 		url: "https://www.jiji.com/rss/ranking.rdf",
@@ -31,37 +62,6 @@ const profiles = {
 		},
 		isObsolete: function (datetime){
 			return Date.now() - datetime > 24 * 60 * 60 * 1000;
-		},
-	},
-	"jiji.comトップ": {
-		id: "jiji-top",
-		url: "https://www.jiji.com/sp/", // pc版はタイトルが省略されている
-		type: "html",
-		access: ["https://www.jiji.com/jc/article?*", "https://www.jiji.com/sp/article?*"],
-		selector: {
-			item: '.HomeTopics .TopicsPhoto, .HomeTopics li, .top5new',
-			title: '.TopicsPhoto > a > span, li > a, dd > p',
-			link: 'a',
-			date: "",
-			description: "",
-		},
-		getTitle: function (title/* element */){
-			return title.firstChild.textContent.trim();
-		},
-		normarizeLink: function (url){
-			url.pathname.startsWith("/sp/") && (url.pathname = "/jc/" + url.pathname.substring(4));
-			url.search.startsWith("?k=") && (url.search = url.search.split("&")[0]);
-			return (new URL(url)).href;
-		},
-		getDataFromArticle: function(text){
-			let data;
-			text.split('<script type="application/ld+json">').forEach((e,i)=>{
-				if (data && data["@type"] === "NewsArticle"){ return; }
-				i > 0 && (data = JSON.parse(e.split('</script>')[0]));
-			});
-			data.title = data.headline;
-			data.date = data.dateModified || data.datePublished;
-			return data;
 		},
 	},
 	"47NEWSトップ": {
@@ -109,8 +109,9 @@ const profiles = {
 			date: "time",
 			description: "",
 		},
-		getTitle: function (title/* element */){
-			return title.textContent.trim() + (title.parentElement.querySelector('use') ? "🔒" : "");
+		getPayed(item){
+			let title = item.querySelector(this.selector.title);
+			return title && title.parentElement.querySelector('use');
 		},
 		excludeItem: function (item, data){
 			return item.getElementsByTagName("time").length === 0;
@@ -154,8 +155,9 @@ const profiles = {
 			date: "time",
 			description: "",
 		},
-		getTitle: function (title/* element */){
-			return title.textContent.trim() + (title.parentElement.querySelector('figure.c-icon--keyGold') ? "🔒" : "");
+		getPayed(item){
+			let title = item.querySelector(this.selector.title);
+			return title && title.parentElement.querySelector('figure.c-icon--keyGold');
 		},
 		normarizeLink: function (url){
 			return url.search = "", (new URL(url)).href;
@@ -175,8 +177,9 @@ const profiles = {
 			date: ".articletag-date",
 			description: "",
 		},
-		getTitle: function (title/* element */){
-			return title.textContent.trim() + (title.parentElement.querySelector('.is-limited') ? "🔒" : "");
+		getPayed(item){
+			let title = item.querySelector(this.selector.title);
+			return title && title.parentElement.querySelector('.is-limited');
 		},
 	},
 	"NHKニュース": {
@@ -202,7 +205,7 @@ const profiles = {
 			let datestr = item.getAttribute('title').split(" ").splice(0,2).join(" ");
 			if (/NY(ダウ|原油)/.test(item.textContent)){
 				let r = /(\d+月\d+日 )(\d+)(:\d+)/.exec(datestr);
-				r && (datestr = r[1] + (r[2] * 1 + 14) + r[3]);
+				r && (datestr = r[1] + (r[2] * 1 + 13) + r[3]);
 			}
 			return datestr;
 		},
@@ -238,6 +241,40 @@ const profiles = {
 	"BBCトップ": {
 		id: "bbc",
 		url: "https://www.bbc.com/japanese",
+		type: "json",
+		fetch(url, init){
+			return new Promise((resolve, reject)=>{
+				let response;
+				fetch(url, init)
+				.then(res =>{
+					response = res;
+					if (! res.ok){ throw Error(res.status + " " + res.statusText); }
+					return res.text();
+				})
+				.then(text =>{
+					const domParser = new DOMParser();
+					const doc = domParser.parseFromString(text, "text/html");
+					const sig = "window.SIMORGH_DATA=";
+					e = Array.from(doc.getElementsByTagName("script")).find(e => e.textContent.startsWith(sig));
+					if (! e){ throw Error(sig + "が見つかりません"); }
+					const data = JSON.parse(e.textContent.substring(sig.length));
+					logd("SIMORGH_DATA:", data);
+					response.json = function(){ return data; };
+					resolve(response);
+				})
+				.catch(e => reject(e));
+			});
+		},
+		getItems(data){
+			const items = [];
+			let g = data.pageData.content.groups.find(g => g.type === "top-stories");
+			g.items.forEach(item =>{
+				let itemData = {title: item.headlines.headline, link: item.locators.assetUri, date: new Date(item.timestamp).toString(), summary: item.summary};
+				items.push(itemData);
+			});
+			return Promise.resolve(items);
+		},
+		/*
 		type: "html",
 		selector: {
 			item: '[aria-labelledby="Top-stories"] li > div',
@@ -246,6 +283,7 @@ const profiles = {
 			date: "h3 ~ time",
 			description: "",
 		},
+		*/
 	},
 	// ===========================================
 	/*
@@ -290,6 +328,12 @@ const profiles = {
 		adjustDate: function (datestr){
 			const r = /^(\d+)年\s(.+)\(.\)\s(.+)$/.exec(datestr);
 			return r ?  r[1] + "/" + r[2] + " " + r[3] : datestr;
+		},
+		getCategory(item){
+			let cat = ["news", "sports", "environment-science-it", "lifestyle"];
+			for (let i = 0 ; i < cat.length ; i++){
+				if (item.classList.contains(cat[i])){ return cat[i]; }
+			}
 		},
 	},
 	// ===========================================

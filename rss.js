@@ -20,7 +20,7 @@ function parseDate(datestr){
 		datestr += " 0:0";
 		datetime = Date.parse(now.getFullYear() + "/" + datestr);
 		datetime > now && (datetime = Date.parse(now.getFullYear() - 1 + "/" + datestr));
-		return {datetime, exact};
+		return {datetime, exact: false};
 	}
 	else if (r = /^(\d+\/\d+\/\d+\s\d+:\d+)$/.exec(datestr)){ // forbes
 		return {datetime: Date.parse(r[1]), exact};
@@ -57,6 +57,7 @@ function getRSS(prof){
 			let count = 0;
 			logd("# got", prof.type, "from", url, ":\n" + ("" + text).substring(0,1000));
 			if (prof.type === "html"){
+				let tasks = [];
 				let d = domParser.parseFromString(text, "text/html");
 				logd(d);
 				if (prof.selector){
@@ -67,6 +68,9 @@ function getRSS(prof){
 						let data = {}, title, link, date;
 						title = item.querySelector(prof.selector.title) || (item.matches(prof.selector.title) && item);
 						data.title = title ? (prof.getTitle ? prof.getTitle(title) : title.textContent.trim()) : "";
+						if (data.payed = prof.getPayed && prof.getPayed(item)){
+							data.title = data.title + "🔒";
+						}
 						link = item.querySelector(prof.selector.link) || (item.matches(prof.selector.link) && item);
 						if (link){
 							const u = new URL(link.getAttribute("href"), prof.url);
@@ -76,45 +80,62 @@ function getRSS(prof){
 						data.datetime = 0;
 						prof.selector.date && (date = item.querySelector(prof.selector.date)) && (data.date = date.textContent.trim());
 						! data.date && prof.getDateFromItem && (data.date = prof.getDateFromItem(item));
+						const postProcess = function(){
+							if (data.date){
+								prof.adjustDate && (data.date = prof.adjustDate(data.date));
+								let {datetime, exact} = parseDate(data.date);
+								data.datetime = datetime, data.exact = exact;
+							}
+							if (prof.getCategory){
+								data.category = prof.getCategory(item);
+							}
+							logd(rss.channel.title, "data:", data);
+							rss.itemCount++;
+							if (data.datetime && prof.isObsolete && prof.isObsolete(data.datetime)){ return; }
+							if (prof.excludeItem && prof.excludeItem(item, data)){ return; }
+							rss.item.push(data);
+						};
 						if (! data.date  && prof.getDataFromArticle){
-							logd("# xhr article from", data.link);
-							let xhr = new XMLHttpRequest();
-							xhr.open("GET", data.link, false/*async*/);
-							xhr.send();
-							if (xhr.status === 200) {
-								let { date, title } = prof.getDataFromArticle(xhr.responseText);
-								data.date = date;
-								logd("date from article:", data.date);
-								if (title && title !== data.title){
-									data.title = title;
-									logd("title from article:", data.title);
-								}
-							}
-							else {
-								logd("# error status:", xhr.status);
-							}
+							let task = new Promise((resolve, reject)=>{
+								fetch(data.link)
+								.then(res =>{
+									if (! res.ok){ throw Error(res.status + " " + res.statusText); }
+									return res.text();
+								})
+								.then(text =>{
+									let { date, title } = prof.getDataFromArticle(text);
+									data.date = date;
+									if (title && title !== data.title){
+										data.title = title;
+										logd("title from article:", data.title);
+									}
+									postProcess();
+									resolve(true);
+								})
+								.catch(e => reject(e));
+							});
+							tasks.push(task);
 						}
-						if (data.date){
-							prof.adjustDate && (data.date = prof.adjustDate(data.date));
-							let {datetime, exact} = parseDate(data.date);
-							data.datetime = datetime, data.exact = exact;
+						else {
+							postProcess();
 						}
-						logd(rss.channel.title, "data:", data);
-						rss.itemCount++;
-						if (data.datetime && prof.isObsolete && prof.isObsolete(data.datetime)){ return; }
-						if (prof.excludeItem && prof.excludeItem(item, data)){ return; }
-						rss.item.push(data);
 					});
-					delete rss.error;
 				}
-				resolve(rss);
+				Promise.allSettled(tasks).then(values => {
+					delete rss.error;
+					resolve(rss);
+				});
 			}
 			else if (prof.type === "rss"){
 				let d = domParser.parseFromString(text, "text/xml"), doc = d.documentElement;
 				logd("xmldoc:", d);
 				logd("xmldoc.documentElement:", doc);
 				const ch = doc.firstElementChild;
-				(ch && ch.tagName === "channel") ? Array.from(ch.children).forEach(e => rss.channel[e.tagName] = e.textContent.trim()) : (ch = null);
+				if (! (ch && ch.tagName === "channel")){
+					console.log("RSS?:", text);
+					throw Error("Channel tag not found in RSS document. Please look at the document output to the console.");
+				}
+				Array.from(ch.children).forEach(e => rss.channel[e.tagName] = e.textContent.trim());
 				logd("channel:", rss.channel);
 				let container;
 				if (doc.tagName === "rdf:RDF"){
@@ -140,6 +161,7 @@ function getRSS(prof){
 							data.link = prof.normarizeLink ? prof.normarizeLink(u) : u.href;
 						}
 						! data.date && data.pubDate && (data.date = data.pubDate);
+						data.date && (data.exact = true);
 						data.datetime = data.date ? (new Date(data.date)).getTime() : 0;
 						logd(rss.channel.title, "data:", data);
 						rss.itemCount++;
@@ -156,7 +178,7 @@ function getRSS(prof){
 						if (prof.first && count++ >= prof.first){ return; }
 						if (prof.max && rss.item.length === prof.max){ return; }
 						let data = {datetime: 0};
-						["title", "link", "date", "media"].forEach(name => {
+						["title", "link", "date", "media", "category", "summary"].forEach(name => {
 							data[name] = (prof.get && prof.get[name]) ? prof.get[name](item) : item[name];
 						});
 						if (data.link){
