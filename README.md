@@ -1,7 +1,7 @@
 # 日本語ニュースリーダー
 
 日本語ニュースを掲載しているサイトやRSSから記事を収集してリンク付きでタイトルを表示します。  
-日付が新しい順に表示、また記事URLが重複する場合は日付が新しいものを表示、新着は色付きで表示  
+日付が新しい順に表示、新着は色付きで表示  
 
 <img src="https://yobukodori.github.io/freedom/image/j-news-reader.jpg" style="width:90%">
 
