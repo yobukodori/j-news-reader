@@ -50,6 +50,7 @@ function getRSS(prof){
 			if (! res.ok){
 				throw Error(res.status + " " + res.statusText);
 			}
+			prof.onResponse && prof.onResponse(res);
 			return prof.type === "json" ? res.json() : res.text();
 		})
 		.then((text)=> {
@@ -89,6 +90,9 @@ function getRSS(prof){
 							if (prof.getCategory){
 								data.category = prof.getCategory(item);
 							}
+							if (prof.getTags){
+								data.tags = prof.getTags(item);
+							}
 							logd(rss.channel.title, "data:", data);
 							rss.itemCount++;
 							if (data.datetime && prof.isObsolete && prof.isObsolete(data.datetime)){ return; }
@@ -122,6 +126,9 @@ function getRSS(prof){
 					});
 				}
 				Promise.allSettled(tasks).then(values => {
+					if (rss.itemCount === 0){
+						console.log("Error: No items in", url + ":\n" + text);
+					}
 					delete rss.error;
 					resolve(rss);
 				});
@@ -178,7 +185,7 @@ function getRSS(prof){
 						if (prof.first && count++ >= prof.first){ return; }
 						if (prof.max && rss.item.length === prof.max){ return; }
 						let data = {datetime: 0};
-						["title", "link", "date", "media", "category", "summary"].forEach(name => {
+						["title", "link", "date", "media", "category", "summary", "extra"].forEach(name => {
 							data[name] = (prof.get && prof.get[name]) ? prof.get[name](item) : item[name];
 						});
 						if (data.link){

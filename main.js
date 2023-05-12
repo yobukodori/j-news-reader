@@ -1,5 +1,5 @@
 const jnr = {
-	appVer: "1.0.8",
+	appVer: "1.0.9",
 	updateInterval: 5 * 60 * 1000,
 };
 
@@ -108,7 +108,7 @@ function updateItemClassByChannel(e){
 
 function isNgItem(item){
 	const title = item.dataItem.title;
-	return settings.isNgTitle(title) || (item.dataChannel.yahoo && settings.isNgYahooMeida(item.dataItem.media)) || (item.dataProfile.id === "afpbb-latest" && settings.isAfpbbNgCategory(item.dataItem.category)) || (settings.needsToExcludePayedArticle() && item.dataItem.payed); 
+	return settings.isNgTitle(title) || (item.dataChannel.yahoo && settings.isYahooNgMeida(item.dataItem.media)) || (item.dataProfile.id === "afpbb-latest" && settings.isAfpbbNgCategory(item.dataItem.category)) || (settings.needsToExcludePayedArticle() && item.dataItem.payed) || (item.dataProfile.id === "yomiuri" && settings.isYomiuriNgTag(item.dataItem.tags)); 
 }
 
 const sameTitle = function(){
@@ -129,6 +129,11 @@ function printRSS(rss, opts){
 		logd(d);
 		let duplicated;
 		if (rss.channel.yahoo){
+			duplicated = Array.from(container.children).find(item => item.dataChannel.yahoo && item.dataItem.extra.id === d.extra.id && item.dataItem.link != d.link);
+			if (duplicated){
+				if (d.extra.articleUrl){ duplicated.remove(); }
+				else { return; }
+			}
 			if (d.media){
 				let media = canonicalizeMediaName(d.media);
 				duplicated = Array.from(container.children).find(item => ! item.dataChannel.yahoo && sameTitle(item.dataItem.title, d.title) && getCanonicalizedMediaName(item) === media);
@@ -142,23 +147,18 @@ function printRSS(rss, opts){
 			let media = canonicalizeMediaName(rss.channel.title);
 			duplicated = Array.from(container.children).find(item => item.dataChannel.yahoo && sameTitle(item.dataItem.title, d.title) && getCanonicalizedMediaName(item) === media);
 			if (duplicated){
-				logd("## title duplicated:", d.title+"\nYahoo", duplicated.dataItem.media, "/", rss.channel.title);
+				logd("## replace title duplicated:", d.title+"\nYahoo", duplicated.dataItem.media, "/", rss.channel.title);
 				duplicated.remove();
 			}
 		}
+		let markNew = true;
 		if ((duplicated = Array.from(container.children).find(item => item.dataItem.link === d.link))){
-			logd("### duplicated link");
 			if (! d.exact || ! duplicated.dataItem.exact){ return; }
 			let datetime = duplicated.dataItem.datetime2 || duplicated.dataItem.datetime;
 			if (d.datetime <= datetime){ return; }
-			if ((rss.profile.id === "nikkei-bar" || settings.needsToCompareDatesOnSameUrl())){
-				logd("# replace url duplicated:", d.title, rss.channel.title + "\nexisting:", duplicated.dataItem.date, "/ new:", d.date);
-				duplicated.remove();
-			}
-			else {
-				logd("# url duplicated:", d.title, rss.channel.title + "\nexisting:", duplicated.dataItem.date, "/ new:", d.date);
-				return;
-			}
+			markNew = settings.needsToMarkNewOnSameUrl() || rss.profile.id === "nikkei-bar";
+			duplicated.remove();
+			logd("# replace url duplicated:", d.title, rss.channel.title + "\nexisting:", duplicated.dataItem.date, "/ new:", d.date, "/ mark new:", markNew);
 		}
 		const title = document.createElement("a"),
 				description = document.createElement("span"),
@@ -179,7 +179,7 @@ function printRSS(rss, opts){
 			r && (item.dataItem.datetime2 = datetime = Date.parse( (r[2] || today.getFullYear()) + "/" + r[3] + "/" +r [4] + " 00:00"));
 		}
 		isNgItem(item) && item.classList.add("x-settings-filter");
-		opts.markNew && item.classList.add("new");
+		opts.markNew && markNew && item.classList.add("new");
 		updateItemClassByChannel(item);
 		let ar = Array.from(container.children).map(item => item.dataItem.datetime2 || item.dataItem.datetime),  i = sortedIndex(ar, datetime, {descending:true});
 		while (i < ar.length && datetime === ar[i]){ i++; }

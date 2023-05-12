@@ -109,6 +109,11 @@ const profiles = {
 			date: "time",
 			description: "",
 		},
+		getTags(item){
+			let tags = [];
+			item.querySelectorAll('a.tag, div.tag > a').forEach(a => tags.push(a.textContent.trim()));
+			return tags;
+		},
 		getPayed(item){
 			let title = item.querySelector(this.selector.title);
 			return title && title.parentElement.querySelector('use');
@@ -155,12 +160,18 @@ const profiles = {
 			date: "time",
 			description: "",
 		},
+		onResponse(res){
+			this.mobile = new URL(res.url).pathname.startsWith("/sp/");
+		},
 		getPayed(item){
 			let title = item.querySelector(this.selector.title);
 			return title && title.parentElement.querySelector('figure.c-icon--keyGold');
 		},
 		normarizeLink: function (url){
-			return url.search = "", (new URL(url)).href;
+			if (this.mobile && url.pathname.startsWith("/articles/")){
+				url.pathname = "/sp/" + url.pathname;
+			}
+			return url.search = "", url.href;
 		},
 		excludeItem: function (item, data){
 			return item.getElementsByTagName("time").length === 0;
@@ -446,8 +457,8 @@ const profiles = {
 			return new Promise((resolve, reject)=>{
 				data.topicsList.categories.forEach(c =>{
 					c.topicsList.forEach(t =>{
-						if (settings.isNgYahooCategory(c.categoryId)){ return; }
-						let item = {title: t.title, link: t.url, date: t.publishedTime_ISO8601};
+						if (settings.isYahooNgCategory(c.categoryId)){ return; }
+						let item = {title: t.title, link: t.url, pickupUrl: t.url, date: t.publishedTime_ISO8601, extra: t};
 						items.push(item);
 						if (settings.needsToGetYahooSource()){
 							let task = new Promise((resolve, reject)=>{
@@ -463,7 +474,7 @@ const profiles = {
 										t = a && a.querySelector('p, h2'),
 										m = (a && a.querySelector('p + span > span'))
 											|| (d && d.querySelector('a + div > span'));
-									if (a){ item.link = a.href; }
+									if (a){ item.link = item.extra.articleUrl = a.href; }
 									if (t && t.textContent.trim()){ item.title = t.textContent.trim(); };
 									if (m && m.textContent.trim()){ item.media = m.textContent.trim(); }
 									resolve(true);

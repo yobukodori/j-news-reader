@@ -45,7 +45,18 @@
 
 #settings-title-filter textarea {
 	margin-left: 0.5em;
-	width: 98%;
+	width: 96%;
+}
+
+div.channel {
+	margin: 0.4em 0.2em;
+	border: solid lightgray;
+	padding: 0.2em;
+}
+
+.filter textarea {
+	margin-left: 0.5em;
+	width: 96%;
 }
 
 #settings-yahoo {
@@ -59,5 +70,5 @@
 }
 
 #settings-yahoo-media-filter textarea {
-	width: 99%;
+	width: 98%;
 }
