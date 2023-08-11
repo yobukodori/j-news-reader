@@ -472,8 +472,16 @@ const profiles = {
 									let d = doc.querySelector('[data-ual-view-type="digest"]'),
 										a = d && d.querySelector('a'),
 										t = a && a.querySelector('p, h2'),
-										m = (a && a.querySelector('p + span > span'))
-											|| (d && d.querySelector('a + div > span'));
+										m;
+									if (t){
+										if (t.tagName === "P"){ // pc
+											m = a.querySelector('p + span')
+												|| d.querySelector('span + div > div > a');
+										}
+										else { // if (t.tagName === "H2"){ // mobile
+											m = d.querySelector('a + div > span');
+										}
+									}
 									if (a){ item.link = item.extra.articleUrl = a.href; }
 									if (t && t.textContent.trim()){ item.title = t.textContent.trim(); };
 									if (m && m.textContent.trim()){ item.media = m.textContent.trim(); }
