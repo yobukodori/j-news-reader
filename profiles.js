@@ -221,10 +221,30 @@ const profiles = {
 			return datestr;
 		},
 	},
+	/*
 	"ロイター トップニュース": {
 		id: "reuter",
 		url: "https://assets.wor.jp/rss/rdf/reuters/top.rdf",
 		type: "rss",
+	},
+	*/
+	"ロイター トップニュース": {
+		id: "reuter",
+		url: "https://jp.reuters.com/",
+		type: "html",
+		selector: {
+			item: '[class^="home-page-grid__wrapper__"] [data-testid$="StoryCard"]',
+			title: 'a[class*="-story-card__"',
+			link: 'a[class*="-story-card__"',
+			date: null, // "time" の textContent はスクリプトでセットしている
+			description: "",
+		},
+		getDateFromItem(item){
+			let time, datetime;
+			if ((time = item.querySelector('time')) && (datetime = time.getAttribute("datetime"))){
+				return datetime;
+			}
+		},
 	},
 	/*
 	"CNN国際ニュース(RSS)": {
