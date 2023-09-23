@@ -262,7 +262,7 @@ const profiles = {
 		url: "https://www.cnn.co.jp/archives/",
 		type: "html",
 		selector: {
-			item: '.list-news-line > li',
+			item: '.pg-container-main > section:first-of-type .list-news-line > li',
 			title: 'a + a[href$=".html"]',
 			link: 'a',
 			date: "span",
