@@ -39,7 +39,8 @@
 	- ( ) でくくって演算の優先順位を指定できます 例 `(ウクラ or ゼレ) (ロシア or プー)`
 	- **適用**：フィルタを適用し一致する記事だけ表示します。入力ボックス内で［Enter］でも適用
 	- **解除**：フィルタの効果を解除します。入力ボックス内で［Esc］でも解除
-- **設定**：各種設定ができます。次のスクリーンショットを参照してください。
+- **設定**：各種設定ができます。次のスクリーンショットを参照してください。  
+    Androidでは設定が保存されないバグがあります。対策は[こちら](https://github.com/yobukodori/j-news-reader/issues/1)を参照してください
 
 <img src="https://yobukodori.github.io/freedom/image/j-news-reader-settings.jpg" style="width:90%">
 
