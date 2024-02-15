@@ -1,7 +1,7 @@
 # 日本語ニュースリーダー
 
 日本語ニュースを掲載しているサイトやRSSから記事を収集してリンク付きでタイトルを表示します。  
-日付が新しい順に表示、新着は色付きで表示  
+日付が新しい順に表示、新着はアイコン付きで表示  
 
 <img src="https://yobukodori.github.io/freedom/image/j-news-reader.jpg" style="width:90%">
 
@@ -42,6 +42,10 @@
 - **設定**：各種設定ができます。次のスクリーンショットを参照してください。  
 
 <img src="https://yobukodori.github.io/freedom/image/j-news-reader-settings.jpg" style="width:90%">
+
+## ダークモードについて
+
+日本語ニュースリーダー自体はダークモードに対応しますが各ニュースサイトは対応していません。記事もダークモードで表示したい場合は自作ユーザースクリプト [dark mode news](https://github.com/yobukodori/dark-mode-news) をインストールしてください。
 
 ## 収集しているニュースチャンネル
 
