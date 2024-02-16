@@ -1,5 +1,5 @@
 const jnr = {
-	appVer: "1.0.17 (2024/2/15 10:44)",
+	appVer: "1.0.18 (2024/2/16 10:06)",
 	updateInterval: 5 * 60 * 1000,
 };
 
@@ -108,7 +108,7 @@ function updateItemClassByChannel(e){
 
 function isNgItem(item){
 	const title = item.dataItem.title;
-	return settings.isNgTitle(title) || (item.dataChannel.yahoo && settings.isYahooNgMeida(item.dataItem.media)) || (item.dataProfile.id === "afpbb-latest" && settings.isAfpbbNgCategory(item.dataItem.category)) || (settings.needsToExcludePayedArticle() && item.dataItem.payed) || (item.dataProfile.id === "yomiuri" && settings.isYomiuriNgTag(item.dataItem.tags)); 
+	return settings.isNgTitle(title) || (item.dataChannel.yahoo && settings.isYahooNgMeida(item.dataItem.media)) || (item.dataProfile.id === "afpbb-latest" && settings.isAfpbbNgCategory(item.dataItem.category)) || (settings.needsToExcludePayedArticle() && item.dataItem.payed) || (item.dataProfile.id === "yomiuri" && settings.isYomiuriNgTag(item.dataItem.tags)) || (item.dataProfile.id === "mainichi" && settings.mainichiExcludeSponichi && item.dataItem.category === "sponichi"); 
 }
 
 const sameTitle = function(){
@@ -353,8 +353,8 @@ document.getElementById("settings").addEventListener("click", ()=>{
 		Array.from(document.getElementById('items').children).forEach(item =>{
 			isNgItem(item) ? item.classList.add("x-settings-filter") : item.classList.remove("x-settings-filter");
 			updateItemClassByChannel(item);
-			item.querySelectorAll('a.title').forEach(a => a.href = workWithDarkModeNews(item.dataItem.link));
-			item.querySelectorAll('a.channel').forEach(a => a.href = workWithDarkModeNews(item.dataChannel.link));
+			item.querySelector('a.title').href = workWithDarkModeNews(item.dataItem.link);
+			item.querySelector('a.channel').href = workWithDarkModeNews(item.dataChannel.link);
 		});
 		showStatistics();
 		document.body.style.colorScheme = settings.colorScheme === "auto" ? "light dark" : settings.colorScheme;
