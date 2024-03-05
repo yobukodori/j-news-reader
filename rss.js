@@ -144,6 +144,7 @@ function getRSS(prof){
 				}
 				Array.from(ch.children).forEach(e => rss.channel[e.tagName] = e.textContent.trim());
 				logd("channel:", rss.channel);
+				prof.fixChannel && prof.fixChannel(rss.channel);
 				let container;
 				if (doc.tagName === "rdf:RDF"){
 					rss.version = 1;
@@ -160,7 +161,7 @@ function getRSS(prof){
 						if (prof.first && count++ >= prof.first){ return; }
 						if (prof.max && rss.item.length === prof.max){ return; }
 						let tag, data = {};
-						[{tag: "title", name: "title"}, {tag: "link", name: "link"}, {tag: "dc:date", name: "date"}, {tag: "pubDate", name: "pubDate"}].forEach(d => {
+						[{tag: "title", name: "title"}, {tag: "link", name: "link"}, {tag: "dc:date", name: "date"}, {tag: "pubDate", name: "pubDate"}, {tag: "dc:author", name: "author"}].forEach(d => {
 							data[d.name] = (tag = item.getElementsByTagName(d.tag)).length > 0 && tag[0].textContent;
 						});
 						if (data.link){

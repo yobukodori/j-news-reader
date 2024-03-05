@@ -2,6 +2,8 @@ const settings = {
 	profiles: null,
 	data: {
 		colorScheme: "auto",
+		displayUnvisitedArticleTitlesInCanvasTextInLightMode: false,
+		displayUnvisitedArticleTitlesInCanvasTextInDarkMode: false,
 		workWithDarkModeNews: false,
 		ngChannel: {},
 		titleFilter: "",
@@ -13,12 +15,19 @@ const settings = {
 		compareDatesOnSameUrl: false,
 		excludePayedArticle: false,
 		yomiuriTagFilter: "",
+		wedgeAuthorFilter: "",
 	},
 	getActiveChannelCount(){
 		return Object.keys(this.profiles).length - Object.keys(this.data.ngChannel).length;
 	},
 	get colorScheme(){
 		return this.data.colorScheme;
+	},
+	get displayUnvisitedArticleTitlesInCanvasTextInLightMode(){
+		return this.data.displayUnvisitedArticleTitlesInCanvasTextInLightMode;
+	},
+	get displayUnvisitedArticleTitlesInCanvasTextInDarkMode(){
+		return this.data.displayUnvisitedArticleTitlesInCanvasTextInDarkMode;
 	},
 	get workWithDarkModeNews(){
 		return this.data.workWithDarkModeNews;
@@ -69,6 +78,9 @@ const settings = {
 	isYahooNgMeida(title){
 		return this.data.yahooMediaFilter ? new Filter(this.data.yahooMediaFilter).match(title) : false;
 	},
+	isWedgeNgAuthor(author){
+		return this.data.wedgeAuthorFilter ? new Filter(this.data.wedgeAuthorFilter).match(author||"") : false;
+	},
 	init(profiles){
 		this.profiles = profiles;
 		this.load();
@@ -92,6 +104,10 @@ const settings = {
 		<option value="light">ライトモード</option>
 		<option value="dark">ダークモード</option>
 		</select>
+		<div><input type="checkbox" id="display-unvisited-article-titles-in-canvas-text-in-light-mode">
+			<label for="display-unvisited-article-titles-in-canvas-text-in-light-mode"><b>ライトモード時未訪問の記事タイトルを通常の文字色（黒）で表示する</b></label></div>
+		<div><input type="checkbox" id="display-unvisited-article-titles-in-canvas-text-in-dark-mode">
+			<label for="display-unvisited-article-titles-in-canvas-text-in-dark-mode"><b>ダークモード時未訪問の記事タイトルを通常の文字色（白）で表示する</b></label></div>
 		<div><input type="checkbox" id="work-with-dark-mode-news">
 			<label for="work-with-dark-mode-news"><b>URL に dark mode news 用パラメータを付加する</b></label></div>
 	</div>
@@ -143,6 +159,13 @@ const settings = {
 			<div><textarea rows="5" spellcheck="false"></textarea></div>
 		</div>
 	</div>
+	<div class="channel wedge">
+		<b>Wedge ONLINE 設定</b>
+		<div class="filter author">
+			<b>執筆者が次のフィルタに一致する記事を除外する</b>
+			<div><textarea rows="1" spellcheck="false"></textarea></div>
+		</div>
+	</div>
 </div>
 `
 		);
@@ -158,6 +181,18 @@ const settings = {
 		e.addEventListener("change", ev =>{
 			// ng: = e.value 呼ばれるときには e には別の値が入っている
 			this.data.colorScheme = colorScheme.value;
+		});
+		// ライトモード時未訪問の記事タイトルをリンクを表す文字色ではなく通常の文字色で表示
+		e = dlg.querySelector("#display-unvisited-article-titles-in-canvas-text-in-light-mode");
+		this.data.displayUnvisitedArticleTitlesInCanvasTextInLightMode && (e.checked = true);
+		e.addEventListener("change", ev =>{
+			this.data.displayUnvisitedArticleTitlesInCanvasTextInLightMode = ev.target.checked ? true : false;
+		});
+		// ダークモード時未訪問の記事タイトルをリンクを表す文字色ではなく通常の文字色で表示
+		e = dlg.querySelector("#display-unvisited-article-titles-in-canvas-text-in-dark-mode");
+		this.data.displayUnvisitedArticleTitlesInCanvasTextInDarkMode && (e.checked = true);
+		e.addEventListener("change", ev =>{
+			this.data.displayUnvisitedArticleTitlesInCanvasTextInDarkMode = ev.target.checked ? true : false;
 		});
 		// URL に dark mode new 用パラメータを付加
 		e = dlg.querySelector("#work-with-dark-mode-news");
@@ -272,6 +307,21 @@ const settings = {
 		yfilter.addEventListener("blur", ev =>{
 			updateYahooMediaFilter();
 		});
+		// Wedge執筆者フィルタ
+		let wdFilter = dlg.querySelector(".channel.wedge .filter.author textarea");
+		wdFilter.value = this.data.wedgeAuthorFilter || "";
+		const updateWedgeAuthorFilter = function(){
+			const v = wdFilter.value.trim(), f = v && new Filter(v);
+			if (f && f.error){
+				alert("Wedge 執筆者フィルタが不正です。" + f.error);
+				return false;
+			}
+			settings.data.wedgeAuthorFilter = v;
+			return true;
+		};
+		wdFilter.addEventListener("blur", ev =>{
+			updateWedgeAuthorFilter();
+		});
 		
 		let onkeydown, cleanup, close, resolve;
 		onkeydown = function(ev){
@@ -287,7 +337,7 @@ const settings = {
 		};
 		close = function(){
 			let error = 0;
-			[updateTitleFilter, updateYomiuriTagFilter, updateYahooMediaFilter].forEach(update =>{
+			[updateTitleFilter, updateYomiuriTagFilter, updateYahooMediaFilter, updateWedgeAuthorFilter].forEach(update =>{
 				! update() && error++;
 			});
 			if (error){ return; }

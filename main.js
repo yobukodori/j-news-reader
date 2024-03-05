@@ -1,5 +1,5 @@
 const jnr = {
-	appVer: "1.0.19 (2024/2/19 06:08)",
+	appVer: "1.0.20 (2024/3/6 21:48)",
 	updateInterval: 5 * 60 * 1000,
 };
 
@@ -108,7 +108,7 @@ function updateItemClassByChannel(e){
 
 function isNgItem(item){
 	const title = item.dataItem.title;
-	return settings.isNgTitle(title) || (item.dataChannel.yahoo && settings.isYahooNgMeida(item.dataItem.media)) || (item.dataProfile.id === "afpbb-latest" && settings.isAfpbbNgCategory(item.dataItem.category)) || (settings.needsToExcludePayedArticle() && item.dataItem.payed) || (item.dataProfile.id === "yomiuri" && settings.isYomiuriNgTag(item.dataItem.tags)) || (item.dataProfile.id === "mainichi" && settings.mainichiExcludeSponichi && item.dataItem.category === "sponichi"); 
+	return settings.isNgTitle(title) || (item.dataChannel.yahoo && settings.isYahooNgMeida(item.dataItem.media)) || (item.dataProfile.id === "afpbb-latest" && settings.isAfpbbNgCategory(item.dataItem.category)) || (settings.needsToExcludePayedArticle() && item.dataItem.payed) || (item.dataProfile.id === "yomiuri" && settings.isYomiuriNgTag(item.dataItem.tags)) || (item.dataProfile.id === "mainichi" && settings.mainichiExcludeSponichi && item.dataItem.category === "sponichi" || (item.dataProfile.id === "wedge" && settings.isWedgeNgAuthor(item.dataItem.author))); 
 }
 
 const sameTitle = function(){
@@ -347,6 +347,25 @@ document.getElementById("clear-filter").addEventListener("click", ()=>{
 	showStatistics();
 });
 
+function onPrefersColorSchemeDarkChange(ev){
+	if (settings.colorScheme === "auto"){
+		document.body.classList[ev.matches ? "add" : "remove"]("dark-mode");
+	}
+}
+
+function setupColorScheme(){
+	if (settings.colorScheme === "auto"){
+		document.body.style.colorScheme = "light dark";
+		document.body.classList[window.matchMedia("(prefers-color-scheme: dark)").matches ? "add" : "remove"]("dark-mode");
+	}
+	else {
+		document.body.style.colorScheme = settings.colorScheme;
+		document.body.classList[settings.colorScheme === "dark" ? "add" : "remove"]("dark-mode");
+	}
+	document.body.classList[settings.displayUnvisitedArticleTitlesInCanvasTextInLightMode ? "add" : "remove"]("display-unvisited-article-titles-in-canvas-text-in-light-mode");
+	document.body.classList[settings.displayUnvisitedArticleTitlesInCanvasTextInDarkMode ? "add" : "remove"]("display-unvisited-article-titles-in-canvas-text-in-dark-mode");
+}
+
 document.getElementById("settings").addEventListener("click", ()=>{
 	settings.open()
 	.then(()=>{
@@ -357,7 +376,7 @@ document.getElementById("settings").addEventListener("click", ()=>{
 			item.querySelector('a.channel').href = workWithDarkModeNews(item.dataChannel.link);
 		});
 		showStatistics();
-		document.body.style.colorScheme = settings.colorScheme === "auto" ? "light dark" : settings.colorScheme;
+		setupColorScheme();
 	});
 });
 
@@ -385,11 +404,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
 		name && (opts[name] = val);
 	});
 	settings.init(profiles);
-	if (settings.colorScheme === "auto"){
-		// デフォルト body {color-scheme: dark light;} で両方に対応できるので何もする必要はない
-	}
-	else {
-		document.body.style.colorScheme = settings.colorScheme;
-	}
+	window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ev=> onPrefersColorSchemeDarkChange(ev));
+	setupColorScheme();
 	! opts.hasOwnProperty("m") && update();
 });
