@@ -3,22 +3,26 @@
 日本語ニュースを掲載しているサイトやRSSから記事を収集してリンク付きでタイトルを表示します。  
 日付が新しい順に表示、新着はアイコン付きで表示  
 
-<img src="https://yobukodori.github.io/freedom/image/j-news-reader.jpg" style="width:90%">
+![j-news-reader.jpg](./docs/j-news-reader.jpg)
 
 ## 【動作条件】
 
  - ブラウザにクロスドメインのリクエストを可能にするCORS操作拡張機能を入れてください。  
-＊私はFirefoxに自作 [CORS&#32;for&#32;Me](https://addons.mozilla.org/ja/firefox/addon/cors-for-me/) を入れて使用しています
+＊私はFirefoxに自作 [CORS&#32;Unbound](https://addons.mozilla.org/ja/firefox/addon/cors-unbound/) を入れて使用しています
 - ニュースリーダー (index.html) をロードした時ページ下部に表示されるURLに対するクロスドメインリクエストを許可してください。
 
-<img src="https://yobukodori.github.io/freedom/image/j-news-reader-page-bottom.jpg" style="width:90%">
+![j-news-reader-page-bottom.jpg](./docs/j-news-reader-page-bottom.jpg)
 
    
-   【CORS for Meでの設定例】  
-![cors4me setting](https://yobukodori.github.io/freedom/image/j-news-reader-cors-setting.jpg)
+   【CORS Unbound での設定例】  
+ ![cors-unbound-settings.jpg](./docs/cors-unbound-settings.jpg)
 
 
-
+j-news-reader をローカルで実行する場合は Origin URLs にローカルの URL を追加してください。  
+```
+https://yobukodori.github.io/j-news-reader/index.html*, file:///C:/your/folder/j-news-reader/index.html*
+```
+末尾の`*`は`index.html?m`をカバーするために付けています。  
 
 ## 使い方
 
@@ -41,7 +45,7 @@
 	- **解除**：フィルタの効果を解除します。入力ボックス内で［Esc］でも解除
 - **設定**：各種設定ができます。次のスクリーンショットを参照してください。  
 
-<img src="https://yobukodori.github.io/freedom/image/j-news-reader-settings.jpg" style="width:90%">
+![settings.jpg](./docs/settings.jpg)
 
 ## ダークモードについて
 

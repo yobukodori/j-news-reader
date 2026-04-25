@@ -48,7 +48,12 @@ function getRSS(prof){
 		.then(res => {
 			logd("# got res:", res);
 			if (! res.ok){
-				throw Error(res.status + " " + res.statusText);
+				const msg = res.status + " " + res.statusText;
+				if (res.status === 304){
+					console.log(msg, "for", url);
+					res.text().then(text => console.log("304 text:", text));
+				}
+				throw Error(msg);
 			}
 			prof.onResponse && prof.onResponse(res);
 			return prof.type === "json" ? res.json() : res.text();
@@ -212,7 +217,9 @@ function getRSS(prof){
 			}
 		})
 		.catch(err => {
-			logd("error on fetching", url + ":" + err);
+			if (err.message !== "NetworkError when attempting to fetch resource."){
+				console.log("error on fetching", url + ":", err);
+			}
 			rss.error = err.message;
 			resolve(rss);
 		});

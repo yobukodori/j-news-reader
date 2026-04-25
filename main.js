@@ -1,5 +1,5 @@
 const jnr = {
-	appVer: "1.0.27 (2025/10/2 9:00)",
+	appVer: "1.0.28 (2026/04/25 19:43)",
 	updateInterval: 5 * 60 * 1000,
 };
 
@@ -215,7 +215,6 @@ function update(){
 	Object.keys(profiles).forEach(k => {
 		const prof = profiles[k];
 		if (settings.isNgChannel(prof.id)){ return; }
-		//if (! prof.name.startsWith("jiji.comトップ")){return;}
 		logd("channel:", prof);
 		let pr = getRSS(prof);
 		jnr.tasks.push(pr);

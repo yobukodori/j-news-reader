@@ -1,3 +1,62 @@
+function rss2json(text){
+	//const logd = console.log;
+	const domParser = new DOMParser();
+	const rss = {error: "unexpected response text", channel: {}, itemCount:0, item: []};
+	let d = domParser.parseFromString(text, "text/xml"), doc = d.documentElement;
+	logd("xmldoc:", d);
+	logd("xmldoc.documentElement:", doc);
+	const ch = doc.firstElementChild;
+	if (! (ch && ch.tagName === "channel")){
+		console.log("RSS?:", text);
+		throw Error("Channel tag not found in RSS document. Please look at the document output to the console.");
+	}
+	Array.from(ch.children).forEach(e => rss.channel[e.tagName] = e.textContent.trim());
+	logd("channel:", rss.channel);
+	let container;
+	if (doc.tagName === "rdf:RDF"){
+		rss.version = 1;
+		container = doc.children;
+	}
+	else if (doc.tagName === "rss"){
+		rss.version = 2;
+		container = ch.children;
+	}
+	if (container){
+		Array.from(container).forEach(item =>{
+			if (item.tagName !== "item"){ return; }
+			logd(rss.channel.title, "item:", item);
+			let data = {};
+			[{tag: "title", name: "title"}, {tag: "link", name: "link"}, {tag: "dc:date", name: "date"}, {tag: "pubDate", name: "pubDate"}, {tag: "dc:author", name: "author"}, {tag: "media:thumbnail", name: "thumbnail", attr: "url"}].forEach(d => {
+				let tags = item.getElementsByTagName(d.tag),
+					tag = tags.length > 0 && tags[0];
+				if (tag){
+					if (d.attr){
+						if (attr = tag.getAttribute(d.attr)){
+							data[d.name] = attr;
+						}
+					}
+					else {
+						data[d.name] = tag.textContent;
+					}
+				}
+			});
+			if (data.link){
+				const u = new URL(data.link);
+				data.link = u.href;
+			}
+			! data.date && data.pubDate && (data.date = data.pubDate);
+			data.date && (data.exact = true);
+			data.datetime = data.date ? (new Date(data.date)).getTime() : 0;
+			//logd("title:", data.title, "thumbnail:", data.thumbnail);
+			//logd(rss.channel.title, "data:", data);
+			rss.itemCount++;
+			rss.item.push(data);
+		});
+		delete rss.error;
+	}
+	return rss;
+}
+
 const profiles = {
 	"jiji.comトップ": {
 		id: "jiji-top",
@@ -76,28 +135,6 @@ const profiles = {
 			description: "",
 		},
 	},
-	/*
-	"読売新聞社会(RSS)": {
-		url: "https://assets.wor.jp/rss/rdf/yomiuri/national.rdf",
-		type: "rss",
-		max: 5,
-	},
-	"読売新聞政治(RSS)": {
-		url: "https://assets.wor.jp/rss/rdf/yomiuri/politics.rdf",
-		type: "rss",
-		max: 5,
-	},
-	"読売新聞経済(RSS)": {
-		url: "https://assets.wor.jp/rss/rdf/yomiuri/economy.rdf",
-		type: "rss",
-		max: 5,
-	},
-	"読売新聞国際(RSS)": {
-		url: "https://assets.wor.jp/rss/rdf/yomiuri/world.rdf",
-		type: "rss",
-		max: 10,
-	},
-	*/
 	"読売新聞トップ": {
 		id: "yomiuri",
 		url: "https://www.yomiuri.co.jp/",
@@ -117,32 +154,6 @@ const profiles = {
 			return item.getElementsByTagName("time").length === 0;
 		},
 	},
-	/*
-	"朝日新聞社会(RSS)": {
-		url: "https://www.asahi.com/rss/asahi/national.rdf",
-		type: "rss",
-		max: 5,
-	},
-	"朝日新聞政治(RSS)": {
-		url: "https://www.asahi.com/rss/asahi/politics.rdf",
-		type: "rss",
-		max: 5,
-	},
-	"朝日新聞経済(RSS)": {
-		url: "https://www.asahi.com/rss/asahi/business.rdf",
-		type: "rss",
-		max: 5,
-	},
-	"朝日新聞国際(RSS)": {
-		url: "https://www.asahi.com/rss/asahi/international.rdf",
-		type: "rss",
-		max: 10,
-	},
-	"朝日新聞速報(RSS)": {
-		url: "https://www.asahi.com/rss/asahi/newsheadlines.rdf",
-		type: "rss",
-	},
-	*/
 	"朝日新聞トップ": {
 		id: "asahi",
 		url: "https://www.asahi.com/",
@@ -222,27 +233,20 @@ const profiles = {
 			return datestr;
 		},
 	},
-	/*
-	"ロイター トップニュース": {
-		id: "reuter",
-		url: "https://assets.wor.jp/rss/rdf/reuters/top.rdf",
-		type: "rss",
-	},
-	*/
 	"ロイター トップニュース": {
 		id: "reuter",
 		url: "https://jp.reuters.com/",
 		type: "html",
 		selector: {
-			item: '[class^="home-page-grid-module__"][class*="story__"]',
-			title: 'h3[data-testid="Heading"]',
-			link: 'a[data-testid="Title"]',
-			date: null, // "time" の textContent はスクリプトでセットしている
+			item: '[class^="story-card-module__tpl-common"], [class^="story-collection-module__list-item"]',
+			title: '[data-testid="TitleHeading"], a[data-testid="Heading"]',
+			link: 'a[data-testid="TitleLink"], a[data-testid="Heading"]',
+			date: null,
 			description: "",
 		},
 		getDateFromItem(item){
 			let time, datetime;
-			if ((time = item.querySelector('time')) && (datetime = time.getAttribute("datetime"))){
+			if ((time = item.querySelector('time')) && (datetime = time.getAttribute("dateTime"))){
 				return datetime;
 			}
 		},
@@ -286,11 +290,11 @@ const profiles = {
 				.then(text =>{
 					const domParser = new DOMParser();
 					const doc = domParser.parseFromString(text, "text/html");
-					const sig = "window.SIMORGH_DATA=";
-					e = Array.from(doc.getElementsByTagName("script")).find(e => e.textContent.startsWith(sig));
+					const sig = 'script#__NEXT_DATA__[type="application/json"]';
+					let e = doc.querySelector(sig);
 					if (! e){ throw Error(sig + "が見つかりません"); }
-					const data = JSON.parse(e.textContent.substring(sig.length));
-					logd("SIMORGH_DATA:", data);
+					const data = JSON.parse(e.textContent);
+					logd("__NEXT_DATA__:", data);
 					response.json = function(){ return data; };
 					resolve(response);
 				})
@@ -299,7 +303,7 @@ const profiles = {
 		},
 		getItems(data){
 			const items = [];
-			data.pageData.curations.forEach(curation =>{
+			data.props.pageProps.pageData.curations.forEach(curation =>{
 				if (curation.title === "トップ記事"){
 					curation.summaries.forEach(s =>{
 						let itemData = {title: s.title, link: s.link, date: s.firstPublished, summary: s.description};
@@ -307,25 +311,8 @@ const profiles = {
 					});
 				}
 			});
-			/*
-			let g = data.pageData.content.groups.find(g => g.type === "top-stories");
-			g.items.forEach(item =>{
-				let itemData = {title: item?.headlines?.headline || item.name, link: item?.locators?.assetUri || item.uri, date: new Date(item.timestamp).toString(), summary: item.summary};
-				items.push(itemData);
-			});
-			*/
 			return Promise.resolve(items);
 		},
-		/*
-		type: "html",
-		selector: {
-			item: '[aria-labelledby="Top-stories"] li > div',
-			title: 'a > span[id^="promo-"]',
-			link: 'a',
-			date: "h3 ~ time",
-			description: "",
-		},
-		*/
 	},
 	// ===========================================
 	/*
@@ -379,42 +366,103 @@ const profiles = {
 		},
 	},
 	// ===========================================
-	/*
-	"AFPBB総合アクセスランキング(RSS)": {
-		// ランキングされている記事は古いものが多い。
-		// httpなので混在コンテンツでブロックされる。CORSプロキシで対応
-		// api.allorigins.win経由だとpcでは最新のrssが取れるがモバイルだと古いrssを取ってしまう(firefox)
-		url: "http://feeds.afpbb.com/rss/afpbb/access_ranking",
-		type: "rss",
-		isObsolete: function (datetime){
-			let yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-			return yesterday.setHours(0, 0, 0, 0), datetime <  yesterday.getTime();
-		},
-	},
-	"AFPBB人気": {
-		// ランキングされている記事は古いものが多い。
-		// モバイルでは日付がない。PCはある。
-		url: "https://www.afpbb.com/list/ranking",
-		type: "html",
-		selector: {
-			item: 'main li, #common-ranking li',
-			title: 'h3.title',
-			link: 'a',
-			date: ".day",
-			description: "",
-		},
-		adjustDate: function (datestr){
-			const r = /^(.+)\(.\)\s(.+)$/.exec(datestr);
-			return r ?  r[1] + " " + r[2] : datestr;
-		},
-		max: 10,
-	},
-	*/
-	// ===========================================
 	"ブルームバーグ トップニュース": {
 		id: "bloomberg",
-		url: "https://assets.wor.jp/rss/rdf/bloomberg/top.rdf",
-		type: "rss",
+		url: "https://www.bloomberg.com/jp",
+		type: "json",
+		requesting: false,
+		queue: [],
+		fetchQueued(){
+			let { url, init, resolve, reject, opts } = this.queue.shift();
+			fetch(url, init)
+			.then(res =>{
+				resolve(res);
+				if (this.queue.length > 0){
+					const delay = opts.delay || 300;
+					setTimeout(this.fetchQueued.bind(this), delay);
+				}
+				else {
+					this.requesting = false;
+				}
+			})
+			.catch(e => reject(e));
+		},
+		fetchSequential(url, init, opts){
+			opts = opts || {};
+			return new Promise((resolve, reject)=>{
+				let data = {url, init, resolve, reject, opts};
+				this.queue.push(data);
+				if (! this.requesting){
+					this.requesting = true;
+					this.fetchQueued();
+				}
+			});
+		},
+		fetch(url, init){
+			return new Promise((resolve, reject)=>{
+				let response;
+				this.fetchSequential(url, init)
+				.then(res =>{
+					response = res;
+					if (! res.ok){ throw Error(res.status + " " + res.statusText); }
+					return res.text();
+				})
+				.then(text =>{
+					const domParser = new DOMParser();
+					const doc = domParser.parseFromString(text, "text/html");
+					const sig = 'script#__NEXT_DATA__[type="application/json"]';
+					let e = doc.querySelector(sig);
+					if (! e){ throw Error(sig + "が見つかりません"); }
+					const data = JSON.parse(e.textContent);
+					//console.log("__NEXT_DATA__", data);
+					response.json = function(){ return data; };
+					resolve(response);
+				})
+				.catch(e => reject(e));
+			});
+		},
+		getItems(data){
+			const seen = new Set();
+			function parseItems(items){
+				const result = [];
+				for (const item of items) {
+					if (! item.id){
+						console.log("bloomberg item has no id. item:", item);
+						throw Error("bloomberg item has no id. item");
+					}
+					const key = item.id;
+					if (seen.has(key)) continue;
+					seen.add(key);
+					const headline = item.headline,
+						text = typeof headline === "string" ? headline: (headline.text ?? "");
+					result.push({ title: text, date: item.updatedAt ?? "", link: item.url ?? "" });
+					if (item.relatedStories){
+						result.push(...parseItems(item.relatedStories));
+					}
+				}
+				return result;
+			}
+			const initialState = data.props.pageProps.initialState;
+			const modules = initialState.modulesById;
+			//console.log("modules:", modules);
+			window.data = data;
+			const result = [];
+			for (const moduleId of Object.keys(modules)) {
+				const mod = modules[moduleId];
+				if (!mod || !mod.items) continue;
+				if (/^vertical-video$/.test(moduleId)){
+					//console.log("bloomberg 除外した", moduleId, ":", mod.items.length);
+					continue;
+				}
+				const max = /^flex-module-\d+$/.test(moduleId) ? 6 : mod.items.length;
+				if (max < mod.items.length){
+					//console.log("bloomberg 除外した", moduleId, ":", mod.items.length - max);
+				}
+				const items = mod.items.slice(0, max);
+				result.push(...parseItems(items));
+			}
+			return Promise.resolve(result);
+		},
 	},
 	"Forbes政治経済": {
 		id: "forbes-economics",
@@ -496,7 +544,9 @@ const profiles = {
 									return res.text();
 								})
 								.then(text =>{
-									const doc = domParser.parseFromString(text, "text/html");
+									const doc = domParser.parseFromString(text, "text/html"),
+										scr = doc.querySelector('script[type="application/ld+json"]'),
+										ld = scr && JSON.parse(scr.textContent);
 									let d = doc.querySelector('[data-ual-view-type="digest"]'),
 										a = d && d.querySelector('a'),
 										t = a && a.querySelector('p, h2'),
@@ -512,8 +562,14 @@ const profiles = {
 										}
 									}
 									if (a){ item.link = item.extra.articleUrl = a.href; }
-									if (t && t.textContent.trim()){ item.title = t.textContent.trim(); };
+									if (t && t.textContent.trim()){ item.title = t.textContent.trim(); }
+									else if (ld?.headline){
+										item.title = ld.headline.replace(/ - エキスパート - Yahoo!ニュース$/, "")
+											.replace(/（Yahoo!ニュース.+?）$/, "")
+											.replace(/#(エキスパートトピ)（.+?）/, "#$1");
+									}
 									if (m && m.textContent.trim()){ item.media = m.textContent.trim(); }
+									else if (ld?.author?.name){ item.media = ld.author.name }
 									resolve(true);
 								})
 								.catch(e => reject(e));
@@ -564,44 +620,6 @@ const profiles = {
 			});
 		},
 	},
-	/*
-	"Yahoo!ニュース・トピックス - 主要": {
-		url: "https://news.yahoo.co.jp/rss/topics/top-picks.xml",
-		type: "rss",
-	},
-	"Yahoo!ニュース・トピックス - 国内": {
-		url: "https://news.yahoo.co.jp/rss/topics/domestic.xml",
-		type: "rss",
-	},
-	"Yahoo!ニュース・トピックス - 国際": {
-		url: "https://news.yahoo.co.jp/rss/topics/world.xml",
-		type: "rss",
-	},
-	"Yahoo!ニュース・トピックス - 経済": {
-		url: "https://news.yahoo.co.jp/rss/topics/business.xml",
-		type: "rss",
-	},
-	"Yahoo!ニュース・トピックス - エンタメ": {
-		url: "https://news.yahoo.co.jp/rss/topics/entertainment.xml",
-		type: "rss",
-	},
-	"Yahoo!ニュース・トピックス - スポーツ": {
-		url: "https://news.yahoo.co.jp/rss/topics/sports.xml",
-		type: "rss",
-	},
-	"Yahoo!ニュース・トピックス - IT": {
-		url: "https://news.yahoo.co.jp/rss/topics/it.xml",
-		type: "rss",
-	},
-	"Yahoo!ニュース・トピックス - 科学": {
-		url: "https://news.yahoo.co.jp/rss/topics/science.xml",
-		type: "rss",
-	},
-	"Yahoo!ニュース・トピックス - 地域": {
-		url: "https://news.yahoo.co.jp/rss/topics/local.xml",
-		type: "rss",
-	},
-	*/
 	"Wedge ONLINE 最新記事": {
 		id: "wedge",
 		url: "https://wedge.ismedia.jp/list/feed/rss",
