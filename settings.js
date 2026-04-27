@@ -32,6 +32,9 @@ const settings = {
 	get workWithDarkModeNews(){
 		return this.data.workWithDarkModeNews;
 	},
+	get fetchDelay(){
+		return 200;
+	},
 	get mainichiExcludeSponichi(){
 		return this.data.mainichiExcludeSponichi;
 	},
